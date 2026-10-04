@@ -10,7 +10,7 @@ on:
           - debug
           - release
           - both
-        default: 'both'
+        default: 'debug'
         required: true
 
 permissions:
@@ -36,10 +36,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          ndk-version: r27c
-          cmdline-tools-version: latest
-          build-tools-version: '34.0.0'
+          api-level: 35
+          build-tools-version: '35.0.0'
+          cmdline-tools-version: 'latest'
+          platform-tools: true
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -55,12 +55,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'both' }}
         run: ./gradlew assembleDebug --no-daemon --stacktrace
-
-      - name: Build Release APK
-        if: ${{ inputs.build_type == 'release' || inputs.build_type == 'both' }}
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Find all APKs
         run: |
@@ -68,13 +63,8 @@ jobs:
           find . -name "*.apk" -type f 2>/dev/null | head -50
           echo "=== Build outputs directory ==="
           find app/build/outputs -type f -name "*.apk" 2>/dev/null | head -50
-          echo "=== Debug APK dir ==="
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "Debug dir not found"
-          echo "=== Release APK dir ==="
-          ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "Release dir not found"
 
       - name: Upload Debug APK
-        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'both' }}
         uses: actions/upload-artifact@v4
         with:
           name: offipe-debug-apk
@@ -83,25 +73,3 @@ jobs:
             app/build/outputs/apk/debug/**/*.apk
           retention-days: 30
           if-no-files-found: warn
-
-      - name: Upload Release APK
-        if: ${{ inputs.build_type == 'release' || inputs.build_type == 'both' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: offipe-release-apk
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/release/**/*.apk
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: Upload Debug Test APK
-        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'both' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: offipe-debug-test-apk
-          path: |
-            app/build/outputs/apk/androidTest/debug/*.apk
-            app/build/outputs/apk/androidTest/debug/**/*.apk
-          retention-days: 30
-          if-no-files-found: ignore
