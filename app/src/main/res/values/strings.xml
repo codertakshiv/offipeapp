@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Offipe</string>
+    <string name="accessibility_service_label">Offipe USSD Automation</string>
+    <string name="accessibility_service_description">Offipe uses this service to read and interact with USSD dialogs for offline UPI payments. It monitors carrier dialog windows to automate multi-step *99# sessions.</string>
+</resources>

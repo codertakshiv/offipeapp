@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Privacy Policy | OffPay</title>
+  <meta name="description" content="OffPay does not collect, transmit, sell, share or back up any of your data to us or any third party. Read our full privacy policy here." />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" type="image/png" href="assets/logos/icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black: #000000; --surface: #0E0F12; --surface-hi: #16181D;
+      --border: #2A2D34; --border-s: #3A3E47;
+      --text-1: #FFFFFF; --text-2: #9BA1A8; --text-3: #5A6068;
+      --lime: #C5F542; --lime-dim: #8AAB2C;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --max: 960px; --pad: clamp(16px, 4.5vw, 48px);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; width: 100%; scroll-behavior: smooth; }
+    body { background: var(--black); color: var(--text-1); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; width: 100%; position: relative; }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    ::selection { background: var(--lime); color: var(--black); }
+
+    .w { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
+    .divider { border: none; border-top: 1px solid var(--border); }
+    .label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; color: var(--lime); text-transform: uppercase; display: block; margin-bottom: 14px; }
+    .lime { color: var(--lime); }
+
+    nav {
+      position: sticky; top: 0; left: 0; right: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 var(--pad); height: 60px;
+      height: calc(60px + env(safe-area-inset-top, 0px));
+      padding-top: env(safe-area-inset-top, 0px);
+      background: rgba(0,0,0,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .nav-brand img { width: 44px; height: 44px; }
+    .nav-links { display: flex; gap: 24px; margin: 0 auto; font-size: 13px; font-weight: 500; color: var(--text-2); }
+    .nav-links a:hover { color: var(--text-1); } .nav-links a.active { color: var(--lime); }
+    .nav-dl { font-size: 12px; font-weight: 700; background: var(--lime); color: var(--black); padding: 10px 16px; min-height: 40px; box-shadow: 2px 2px 0 var(--lime-dim); transition: box-shadow 80ms, transform 80ms, opacity 180ms ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .nav-dl:hover { box-shadow: 3px 3px 0 var(--lime-dim); transform: translate(-1px,-1px); }
+
+    .nav-star {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--surface-hi);
+      transition: border-color 150ms, background-color 150ms, transform 80ms;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .nav-star:hover {
+      border-color: #ffb300;
+      background: rgba(255,179,0,0.08);
+      transform: translate(-1px, -1px);
+      box-shadow: 2px 2px 0 rgba(255,179,0,0.2);
+    }
+    .nav-star:active {
+      transform: translate(1px, 1px);
+      box-shadow: none;
+    }
+    
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .menu-toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 22px;
+      height: 14px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      z-index: 210;
+    }
+    .menu-toggle .bar {
+      width: 100%;
+      height: 2px;
+      background-color: var(--text-1);
+      transition: all 0.2s ease-in-out;
+    }
+    .mobile-menu {
+      position: fixed;
+      top: calc(60px + env(safe-area-inset-top, 0px));
+      left: 0;
+      width: 100%;
+      height: calc(100vh - (60px + env(safe-area-inset-top, 0px)));
+      background: rgba(13,13,13,0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 190;
+      display: flex;
+      flex-direction: column;
+      padding: 40px var(--pad);
+      transform: translateY(-100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-bottom: 1px solid var(--border);
+    }
+    .mobile-menu.active {
+      transform: translateY(0);
+    }
+    .mobile-menu-links {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .mobile-menu-links a {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-2);
+      letter-spacing: -0.02em;
+      transition: color 0.2s ease;
+    }
+    .mobile-menu-links a:hover,
+    .mobile-menu-links a.active {
+      color: var(--lime);
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .menu-toggle { display: flex; }
+      .menu-toggle.active .bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+      .menu-toggle.active .bar:nth-child(2) { opacity: 0; }
+      .menu-toggle.active .bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+      .nav-dl {
+        font-size: 11px;
+        padding: 8px 12px;
+        min-height: 34px;
+      }
+      body.menu-open .nav-dl {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .foot-in {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+      }
+      .foot-links {
+        justify-content: center;
+        gap: 16px 20px;
+      }
+    }
+
+    /* Hero */
+    .legal-hero { padding: clamp(60px, 10vw, 110px) 0 clamp(36px, 5vw, 60px); }
+    .legal-hero h1 { font-size: clamp(32px, 7vw, 72px); font-weight: 800; letter-spacing: -0.04em; line-height: 1.0; color: var(--text-1); }
+    .legal-hero .effective-date { font-family: var(--mono); font-size: 11px; color: var(--text-3); text-transform: uppercase; margin-top: 10px; display: block; }
+    .legal-hero .intro { font-size: clamp(14px, 1.2vw, 16px); color: var(--text-2); line-height: 1.6; max-width: 65ch; margin-top: 16px; }
+
+    /* Legal Content / Cards */
+    .legal-wrap { padding: clamp(36px, 5vw, 60px) 0; }
+    .legal-grid { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+    
+    .legal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: 3px 3px 0 var(--border);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .legal-card:hover {
+      border-color: var(--lime);
+      box-shadow: 3px 3px 0 rgba(197, 245, 66, 0.2);
+    }
+    .legal-card h3 {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--lime);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .legal-card p {
+      font-size: 14.5px;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+    .legal-card a {
+      color: var(--lime);
+      text-decoration: underline;
+    }
+
+    /* Cat */
+    .cat { position: relative; overflow: hidden; border-top: 1px solid var(--border); }
+    .cat-img { width: 100%; height: clamp(160px, 26vw, 300px); object-fit: cover; object-position: center 35%; filter: brightness(0.4); }
+    .cat-copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--pad); }
+    .cat-by { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--lime); margin-bottom: 12px; text-transform: uppercase; }
+    .cat-line { font-size: clamp(22px, 4.5vw, 44px); font-weight: 800; letter-spacing: -0.03em; color: var(--text-1); line-height: 1.08; }
+
+    /* Footer */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 32px var(--pad); }
+    .foot-in { max-width: var(--max); margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+    .foot-brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+    .foot-brand img { width: 30px; height: 30px; }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; color: var(--text-3); font-weight: 500; }
+    .foot-links a:hover { color: var(--text-1); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">
+    <img src="assets/logos/icon.png" alt="OffPay" />
+    <span><span class="lime">Off</span>Pay</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html#demo">Demo</a>
+    <a href="index.html#features">Features</a>
+    <a href="index.html#pwa">PWA</a>
+    <a href="setup.html">Setup</a>
+    <a href="faq.html">FAQ</a>
+    <a href="about.html">About</a>
+  </div>
+  <div class="nav-right">
+    <a href="https://github.com/laksh-ya/offpayapp" target="_blank" rel="noopener" class="nav-star" aria-label="Star on GitHub">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #ffb300;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="currentColor"/></svg>
+    </a>
+    <a href="index.html#download" class="nav-dl">Download</a>
+    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu" id="mobile-menu">
+  <div class="mobile-menu-links">
+    <a href="index.html#demo">Demo</a>
+    <a href="index.html#features">Features</a>
+    <a href="index.html#pwa">PWA</a>
+    <a href="setup.html">Setup</a>
+    <a href="faq.html">FAQ</a>
+    <a href="about.html">About</a>
+  </div>
+</div>
+
+<section class="legal-hero">
+  <div class="w">
+    <span class="label">Legal</span>
+    <h1>Privacy Policy</h1>
+    <span class="effective-date">Effective 26 May 2026</span>
+    <p class="intro">Plain-language version. Read this in full: it covers what we do and don't do with your data, and what you're agreeing to when you use OffPay.</p>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<div class="legal-wrap">
+  <div class="w">
+    <div class="legal-grid">
+      
+      <div class="legal-card">
+        <h3>The short version</h3>
+        <p>OffPay does not collect, transmit, sell, share or back up any of your data to us or any third party. There is no OffPay account, no analytics, no advertising. Everything you do in OffPay stays on your device. After install, the app makes zero outbound network requests.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>What OffPay handles</h3>
+        <p>OffPay needs a few pieces of information to dial *99# on your behalf and answer the carrier's prompts. Your UPI ID, payment amount and optional note live in app memory during a session, and on success are saved to an encrypted on-device history. The carrier's reply text is shown to you and recorded for successful payments. Your active SIM's carrier name is read once on launch to detect Jio (which doesn't reliably support *99#). Your operation-mode preference and last balance are saved in a private on-device key-value store. Scanned or imported QR codes are decoded in memory only, they are never stored.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>What OffPay does NOT collect</h3>
+        <p>We do not read your name, email, phone number, contacts, location, IMEI, IMSI, advertising ID, or device ID. We do not have access to your bank account. The accessibility service is restricted by configuration to the system USSD dialog packages and ignores every other app and screen on your device.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Your UPI PIN</h3>
+        <p>Your UPI PIN lives only in volatile memory and is wiped within 500 milliseconds of any session ending (success, failure, timeout or cancel) and on app backgrounding. It is never written to storage, never logged, never sent over the network, and is masked as four bullets in any UI surface that might display it. The carrier-side handling of your PIN is the same path BHIM, GPay and your bank's own app use.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Clipboard Privacy</h3>
+        <p>OffPay accesses your system clipboard strictly to copy the recipient's VPA / UPI ID (in Manual Mode) or read imported QR code texts. Clipboard content is processed transiently in volatile memory on-device and is never written to disk, stored, or transmitted to any server.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Screen Capture and Recording Privacy</h3>
+        <p>OffPay operates completely offline and lacks permission to query other running apps or monitor your operating system for active background screen recorders, casting services (e.g. Chromecast, Miracast), or remote control tools. To protect your financial data, ensure your screen is not being shared, cast, or recorded by other apps when entering your UPI PIN.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Encrypted history</h3>
+        <p>Successful payments are saved to a local SQLite database encrypted with SQLCipher. The raw file on disk is unreadable without the app's key. The database is capped at 200 most-recent records and you can clear it any time from the History screen. Uninstalling OffPay deletes everything.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Permissions</h3>
+        <p>Phone (CALL_PHONE): only ever used to dial *99# codes, never regular numbers. Camera: live QR scanning, processed on-device by ML Kit, frames are not stored or uploaded. Phone state (READ_PHONE_STATE): reads the carrier name to apply the Jio fail-fast rule. Accessibility service: reads the carrier USSD dialog and types replies for you, restricted to known carrier dialog packages. Display over other apps (SYSTEM_ALERT_WINDOW): paints the OffPay UI over the carrier dialog in Auto mode. Denying any optional permission still leaves Manual mode fully usable.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Children</h3>
+        <p>OffPay is intended for users old enough to operate a personal UPI account. We do not knowingly direct OffPay at children, and we do not collect any data that would let us identify a child or anyone else.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Changes</h3>
+        <p>If we ever change how OffPay handles data, this screen will be updated, the effective date will be bumped and the change will be highlighted in the corresponding release notes. The repository's git history is the canonical record of every revision.</p>
+      </div>
+
+      <div class="legal-card">
+        <h3>Contact</h3>
+        <p>Questions or concerns about privacy? Open an issue on the project's repository on <a href="https://github.com/Laksh-ya/OffPayApp" target="_blank" rel="noopener">GitHub</a>.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="cat" aria-hidden="true">
+  <img class="cat-img" src="assets/cat_aesthetic.png" alt="" loading="lazy" />
+  <div class="cat-copy">
+    <div class="cat-by">Made by Lakshya &amp; Harsh</div>
+    <div class="cat-line">now go pay<br/>without the <span class="lime">internet.</span></div>
+  </div>
+</div>
+
+<footer>
+  <div class="foot-in">
+    <a href="index.html" class="foot-brand">
+      <img src="assets/logos/icon.png" alt="" />
+      <span><span class="lime">Off</span>Pay</span>
+    </a>
+    <div class="foot-links">
+      <a href="setup.html">Setup</a>
+      <a href="faq.html">FAQ</a>
+      <a href="about.html">About</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/Laksh-ya/OffPayApp" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://offpay.vercel.app/" target="_blank" rel="noopener">PWA</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile menu toggle logic
+  const menuToggle = document.getElementById('menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (menuToggle && mobileMenu) {
+    menuToggle.addEventListener('click', () => {
+      menuToggle.classList.toggle('active');
+      mobileMenu.classList.toggle('active');
+      const isActive = mobileMenu.classList.contains('active');
+      document.body.style.overflow = isActive ? 'hidden' : '';
+      if (isActive) {
+        document.body.classList.add('menu-open');
+      } else {
+        document.body.classList.remove('menu-open');
+      }
+    });
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        menuToggle.classList.remove('active');
+        mobileMenu.classList.remove('active');
+        document.body.classList.remove('menu-open');
+        document.body.style.overflow = '';
+      });
+    });
+  }
+</script>
+</body>
+</html>
