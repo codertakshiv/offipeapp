@@ -30,9 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import com.offipe.app.presentation.ui.components.NeoPopCard
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 
 /**
  * Effective date stamped on every legal screen. Bump on every material
@@ -459,7 +459,7 @@ private fun LegalDocumentScaffold(
 
 @Composable
 private fun LegalSection(heading: String, body: String) {
-    NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+    OffipeCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
                 text = heading.uppercase(),
@@ -497,4 +497,5 @@ private fun CloseChip(onClick: () -> Unit) {
         )
     }
 }
+
 

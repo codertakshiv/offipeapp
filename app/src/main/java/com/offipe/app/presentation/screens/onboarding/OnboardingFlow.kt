@@ -81,11 +81,11 @@ import com.offipe.app.presentation.permissions.openAccessibilitySettings
 import com.offipe.app.presentation.permissions.openOverlaySettings
 import com.offipe.app.presentation.permissions.rememberPermissionLaunchers
 import com.offipe.app.presentation.permissions.rememberPermissionStatus
-import com.offipe.app.presentation.ui.components.NeoPopCard
-import com.offipe.app.presentation.ui.components.NeoPopPrimaryButton
-import com.offipe.app.presentation.ui.components.NeoPopSecondaryButton
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.components.OffipePrimaryButton
+import com.offipe.app.presentation.ui.components.OffipeSecondaryButton
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 import kotlinx.coroutines.launch
 
 // ─── Hooks for the user to drop in real assets later ──────────────────────────
@@ -129,7 +129,7 @@ fun OnboardingFlow(onComplete: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Box(modifier = Modifier.padding(horizontal = 20.dp)) {
             val isLast = pagerState.currentPage == totalPages - 1
-            NeoPopPrimaryButton(
+            OffipePrimaryButton(
                 text = when (pagerState.currentPage) {
                     0 -> "Continue"
                     1 -> "Got It"
@@ -280,7 +280,7 @@ private fun Star99ExplainerPage() {
             color = OffipeColors.TextPrimary
         )
         Spacer(Modifier.height(20.dp))
-        NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+        OffipeCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
                     text = "*99# is NPCI's USSD shortcode for offline UPI. It rides over your phone's signaling channel — the same one that carries calls and SMS — so it works in low-coverage areas where mobile data fails.",
@@ -362,7 +362,7 @@ private fun Star99BankingSetupPage() {
         Spacer(Modifier.height(20.dp))
 
         // ── Instructions card ──
-        NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+        OffipeCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
                     text = "This needs to be done once. After this, Offipe handles everything.",
@@ -382,7 +382,7 @@ private fun Star99BankingSetupPage() {
         Spacer(Modifier.height(20.dp))
 
         // ── Dial *99# button ──
-        NeoPopPrimaryButton(
+        OffipePrimaryButton(
             text = "Dial *99#",
             leadingIcon = Icons.Default.Phone,
             onClick = {
@@ -396,7 +396,7 @@ private fun Star99BankingSetupPage() {
         Spacer(Modifier.height(16.dp))
 
         // ── Video guide link ──
-        NeoPopSecondaryButton(
+        OffipeSecondaryButton(
             text = "Watch Official *99# Guide",
             leadingIcon = Icons.Default.PlayArrow,
             onClick = {
@@ -647,7 +647,7 @@ private fun PermissionsPage(permissions: PermissionStatus) {
 
 @Composable
 private fun PermissionCard(info: PermissionInfo, onHelp: () -> Unit) {
-    NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+    OffipeCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -822,7 +822,7 @@ private fun RestrictedSettingsFix() {
                 Spacer(Modifier.height(14.dp))
 
                 // Guide link
-                NeoPopSecondaryButton(
+                OffipeSecondaryButton(
                     text = "View Guide with Screenshots",
                     onClick = {
                         val intent = Intent(
@@ -877,4 +877,5 @@ private fun ReadyPage() {
         )
     }
 }
+
 

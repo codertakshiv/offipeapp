@@ -55,9 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.offipe.app.data.TransactionEntity
 import com.offipe.app.presentation.HistoryViewModel
-import com.offipe.app.presentation.ui.components.NeoPopCard
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -390,7 +390,7 @@ private fun TransactionCard(
     var expanded by remember { mutableStateOf(false) }
     val view = LocalView.current
 
-    NeoPopCard(
+    OffipeCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded }
@@ -561,4 +561,5 @@ private fun PayAgainButton(onClick: () -> Unit) {
         }
     }
 }
+
 

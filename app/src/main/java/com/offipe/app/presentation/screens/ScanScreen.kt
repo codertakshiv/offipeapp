@@ -74,11 +74,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.offipe.app.platform.QrScannerManager
 import com.offipe.app.presentation.permissions.openAppDetailsSettings
-import com.offipe.app.presentation.ui.components.NeoPopAccentCard
-import com.offipe.app.presentation.ui.components.NeoPopPrimaryButton
-import com.offipe.app.presentation.ui.components.NeoPopSecondaryButton
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeAccentCard
+import com.offipe.app.presentation.ui.components.OffipePrimaryButton
+import com.offipe.app.presentation.ui.components.OffipeSecondaryButton
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -336,7 +336,7 @@ private fun PermissionDeniedContent(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        NeoPopAccentCard(accent = OffipeColors.Accent, modifier = Modifier.fillMaxWidth()) {
+        OffipeAccentCard(accent = OffipeColors.Accent, modifier = Modifier.fillMaxWidth()) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier
@@ -368,20 +368,20 @@ private fun PermissionDeniedContent(
         }
         Spacer(Modifier.height(20.dp))
         if (permanentlyDenied) {
-            NeoPopPrimaryButton(
+            OffipePrimaryButton(
                 text = "Open App Settings",
                 onClick = onOpenSettings,
                 modifier = Modifier.fillMaxWidth()
             )
         } else {
-            NeoPopPrimaryButton(
+            OffipePrimaryButton(
                 text = "Grant Camera",
                 onClick = onGrant,
                 modifier = Modifier.fillMaxWidth()
             )
         }
         Spacer(Modifier.height(12.dp))
-        NeoPopSecondaryButton(
+        OffipeSecondaryButton(
             text = "Cancel",
             onClick = onClose,
             modifier = Modifier.fillMaxWidth()
@@ -691,4 +691,5 @@ private fun ZoomSlider(zoom: Float) {
         )
     }
 }
+
 

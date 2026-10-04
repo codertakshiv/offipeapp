@@ -51,13 +51,13 @@ import com.offipe.app.domain.SessionState
 import com.offipe.app.presentation.BalanceResult
 import com.offipe.app.presentation.BalanceViewModel
 import com.offipe.app.presentation.HistoryViewModel
-import com.offipe.app.presentation.ui.components.NeoPopAccentCard
-import com.offipe.app.presentation.ui.components.NeoPopCard
-import com.offipe.app.presentation.ui.components.NeoPopDangerOutlinedButton
-import com.offipe.app.presentation.ui.components.NeoPopPrimaryButton
+import com.offipe.app.presentation.ui.components.OffipeAccentCard
+import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.components.OffipeDangerOutlinedButton
+import com.offipe.app.presentation.ui.components.OffipePrimaryButton
 import com.offipe.app.presentation.ui.components.PinBoxes
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,7 +66,7 @@ import java.util.Locale
  * Bank balance check screen.
  *  - Page title at the top.
  *  - Idle state: small "BANK BALANCE" line + a centered inline PIN entry
- *    section (the hero), followed by a "CHECK NOW" NeoPOP button. Auto-fires
+ *    section (the hero), followed by a "CHECK NOW" Offipe button. Auto-fires
  *    once the user types 6 digits.
  *  - During a session: stepped progress card replaces the entry section.
  *  - Success: balance card with the prior result is the hero, PIN section
@@ -182,7 +182,7 @@ fun BalanceScreen(
                         OperationMode.MANUAL -> "Open Dialer"
                         else -> "Check Balance"
                     }
-                    NeoPopPrimaryButton(
+                    OffipePrimaryButton(
                         text = ctaText,
                         onClick = {
                             keyboard?.hide()
@@ -192,14 +192,14 @@ fun BalanceScreen(
                     )
                 }
                 is SessionState.Success -> {
-                    NeoPopPrimaryButton(
+                    OffipePrimaryButton(
                         text = "Check Again",
                         onClick = { viewModel.dismissSession() },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
                 is SessionState.Running -> {
-                    NeoPopDangerOutlinedButton(
+                    OffipeDangerOutlinedButton(
                         text = "Stop",
                         onClick = viewModel::cancelSession,
                         modifier = Modifier.fillMaxWidth()
@@ -405,7 +405,7 @@ private fun BalancePinSection(
     error: String?,
     pinLength: Int = 6
 ) {
-    NeoPopAccentCard(
+    OffipeAccentCard(
         accent = OffipeColors.Accent,
         modifier = Modifier
             .fillMaxWidth()
@@ -454,7 +454,7 @@ private fun SessionRunning(state: SessionState.Running) {
             color = OffipeColors.Accent
         )
         Spacer(Modifier.height(12.dp))
-        NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+        OffipeCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
                     text = state.label,
@@ -530,7 +530,7 @@ private fun FailedCard(message: String, resultText: String, onRetry: () -> Unit)
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center
     ) {
-        NeoPopAccentCard(accent = OffipeColors.Danger, modifier = Modifier.fillMaxWidth()) {
+        OffipeAccentCard(accent = OffipeColors.Danger, modifier = Modifier.fillMaxWidth()) {
             Column {
                 Box(
                     Modifier
@@ -567,7 +567,7 @@ private fun FailedCard(message: String, resultText: String, onRetry: () -> Unit)
             }
         }
         Spacer(Modifier.height(20.dp))
-        NeoPopPrimaryButton(text = "Retry", onClick = onRetry, modifier = Modifier.fillMaxWidth())
+        OffipePrimaryButton(text = "Retry", onClick = onRetry, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -632,7 +632,7 @@ private fun RecentTransactionsSection(
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             txns.forEach { txn ->
-                NeoPopCard(
+                OffipeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
@@ -675,4 +675,5 @@ private fun RecentTransactionsSection(
         }
     }
 }
+
 

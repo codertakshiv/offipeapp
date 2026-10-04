@@ -62,11 +62,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.offipe.app.R
 import com.offipe.app.presentation.permissions.openAccessibilitySettings
-import com.offipe.app.presentation.ui.components.NeoPopCard
-import com.offipe.app.presentation.ui.components.NeoPopPrimaryButton
-import com.offipe.app.presentation.ui.components.NeoPopSecondaryButton
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.components.OffipePrimaryButton
+import com.offipe.app.presentation.ui.components.OffipeSecondaryButton
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 
 // ─── Hooks for the user to drop in real assets later ──────────────────────────
 
@@ -166,7 +166,7 @@ fun FaqScreen(
                 Spacer(Modifier.height(6.dp))
                 NumberedStep(3, "Follow on-screen prompts to link your bank account")
                 Spacer(Modifier.height(14.dp))
-                NeoPopPrimaryButton(
+                OffipePrimaryButton(
                     text = "Dial *99#",
                     leadingIcon = Icons.Default.Phone,
                     onClick = {
@@ -179,7 +179,7 @@ fun FaqScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                NeoPopSecondaryButton(
+                OffipeSecondaryButton(
                     text = "Official *99# Guide",
                     leadingIcon = Icons.Default.PlayArrow,
                     onClick = {
@@ -238,7 +238,7 @@ fun FaqScreen(
                 Spacer(Modifier.height(6.dp))
                 NumberedStep(3, "Come back to Offipe. The tile should show ENABLED.")
                 Spacer(Modifier.height(14.dp))
-                NeoPopSecondaryButton(
+                OffipeSecondaryButton(
                     text = "Open Accessibility Settings",
                     onClick = { openAccessibilitySettings(context) },
                     modifier = Modifier.fillMaxWidth()
@@ -270,7 +270,7 @@ fun FaqScreen(
                 Spacer(Modifier.height(6.dp))
                 NumberedStep(4, "Open Offipe → enable Accessibility")
                 Spacer(Modifier.height(14.dp))
-                NeoPopSecondaryButton(
+                OffipeSecondaryButton(
                     text = "View Guide with Screenshots",
                     leadingIcon = Icons.Default.PlayArrow,
                     onClick = {
@@ -385,7 +385,7 @@ fun FaqScreen(
             // Video tutorial
             val videoUrl = TUTORIAL_VIDEO_URL
             if (videoUrl != null) {
-                NeoPopSecondaryButton(
+                OffipeSecondaryButton(
                     text = "Watch Video Tutorial",
                     leadingIcon = Icons.Default.PlayArrow,
                     onClick = {
@@ -399,7 +399,7 @@ fun FaqScreen(
             }
 
             // GitHub
-            NeoPopSecondaryButton(
+            OffipeSecondaryButton(
                 text = "Source Code & Guides (GitHub)",
                 leadingIcon = Icons.Default.Code,
                 onClick = {
@@ -420,7 +420,7 @@ fun FaqScreen(
             Spacer(Modifier.height(16.dp))
 
             // Replay onboarding
-            NeoPopSecondaryButton(
+            OffipeSecondaryButton(
                 text = "Replay Onboarding",
                 leadingIcon = Icons.Default.Refresh,
                 onClick = {
@@ -460,7 +460,7 @@ private fun ExpandableQuestion(
         label = "qa_arrow"
     )
 
-    NeoPopCard(modifier = Modifier.fillMaxWidth()) {
+    OffipeCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             // Question header
             Row(
@@ -689,4 +689,5 @@ private fun CookieEasterEgg() {
         }
     }
 }
+
 

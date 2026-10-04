@@ -42,10 +42,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.offipe.app.domain.SessionState
-import com.offipe.app.presentation.ui.components.NeoPopAccentCard
-import com.offipe.app.presentation.ui.components.NeoPopPrimaryButton
-import com.offipe.app.presentation.ui.theme.NeoPopColors
-import com.offipe.app.presentation.ui.theme.NeoPopType
+import com.offipe.app.presentation.ui.components.OffipeAccentCard
+import com.offipe.app.presentation.ui.components.OffipePrimaryButton
+import com.offipe.app.presentation.ui.theme.OffipeColors
+import com.offipe.app.presentation.ui.theme.OffipeType
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
  *
  * The design intent is to keep this distinct from typical UPI apps (which
  * rely on rounded check-mark Lottie loops). Instead we lean fully into the
- * NeoPOP language already used in this app:
+ * Offipe language already used in this app:
  *
  *  - Sharp square hero (no circles).
  *  - Stroke-drawn check / cross — animated reveal, not a static glyph.
@@ -126,7 +126,7 @@ internal fun SessionSuccessCard(state: SessionState.Success, onDone: () -> Unit)
                     alpha = cardEnter
                 }
         ) {
-            NeoPopAccentCard(
+            OffipeAccentCard(
                 accent = OffipeColors.Success,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -182,7 +182,7 @@ internal fun SessionSuccessCard(state: SessionState.Success, onDone: () -> Unit)
         }
         Spacer(Modifier.height(20.dp))
         Box(Modifier.alpha(ctaAlpha)) {
-            NeoPopPrimaryButton(
+            OffipePrimaryButton(
                 text = "Continue",
                 onClick = { if (ctaAlpha > 0.5f) onDone() },
                 modifier = Modifier.fillMaxWidth()
@@ -270,7 +270,7 @@ internal fun SessionFailedCard(
                     alpha = cardEnter
                 }
         ) {
-            NeoPopAccentCard(
+            OffipeAccentCard(
                 accent = OffipeColors.Danger,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -342,7 +342,7 @@ internal fun SessionFailedCard(
         }
         Spacer(Modifier.height(20.dp))
         Box(Modifier.alpha(ctaAlpha)) {
-            NeoPopPrimaryButton(
+            OffipePrimaryButton(
                 text = "Retry",
                 onClick = { if (ctaAlpha > 0.5f) onRetry() },
                 modifier = Modifier.fillMaxWidth()
@@ -645,4 +645,5 @@ private fun easeOutBack(t: Float): Float {
     val u = t.coerceIn(0f, 1f) - 1f
     return 1f + c3 * u * u * u + c1 * u * u
 }
+
 
