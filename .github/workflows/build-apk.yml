@@ -33,18 +33,15 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 35
-          build-tools-version: '35.0.0'
-          platform-tools: true
-          # Do NOT install cmdline-tools - use pre-installed one
+      - name: Accept Android SDK licenses
+        run: |
+          # Use the pre-installed sdkmanager (already in PATH via ANDROID_HOME)
+          yes | sdkmanager --licenses
 
       - name: Install required SDK packages
         run: |
-          # Use full path to sdkmanager (pre-installed in runner)
-          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          # Install only required packages - NO obsolete 'tools' package
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       - name: Cache Gradle
         uses: actions/cache@v4
