@@ -1,25 +1,20 @@
 package com.offipe.app.presentation.screens
 
-import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,9 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.components.Hairline
+import com.offipe.app.presentation.ui.components.IconKey
+import com.offipe.app.presentation.ui.components.Segmented
+import com.offipe.app.presentation.ui.components.Tag
 import com.offipe.app.presentation.ui.theme.OffipeColors
 import com.offipe.app.presentation.ui.theme.OffipeType
 
@@ -41,17 +38,18 @@ import com.offipe.app.presentation.ui.theme.OffipeType
 private const val EFFECTIVE_DATE = "16 June 2026"
 
 /**
- * Privacy policy screen — reachable from Settings → "Legal" → "Privacy
+ * Privacy policy document — reachable from Settings → "Legal" → "Privacy
  * Policy" and from the onboarding flow's final step.
  *
- * The content here is the same plain-language summary we maintain in the
- * repository's PRIVACY.md, tailored for on-device viewing. Anything that
- * changes in our handling of user data MUST be reflected here AND the
- * effective date bumped.
+ * Plain-language summary mirrored from the repository's PRIVACY.md, set
+ * as a ruled document: mono section headings, sans body copy, hairline
+ * rules. Anything that changes in our handling of user data MUST be
+ * reflected here AND the effective date bumped.
  */
 @Composable
 fun PrivacyScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     LegalDocumentScaffold(
+        tag = "Legal · Privacy",
         title = "Privacy Policy",
         effectiveDate = EFFECTIVE_DATE,
         onClose = onClose,
@@ -59,11 +57,11 @@ fun PrivacyScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         LegalSection(
             heading = "The short version",
-body = "Offipe does not collect, transmit, sell, share, or back up any of your data to us or any third party. There is no Offipe account, no analytics, no advertising. Everything you do in Offipe stays on your device. After install, the app makes zero outbound network requests."
+            body = "Offipe does not collect, transmit, sell, share, or back up any of your data to us or any third party. There is no Offipe account, no analytics, no advertising. Everything you do in Offipe stays on your device. After install, the app makes zero outbound network requests."
         )
         LegalSection(
             heading = "What Offipe handles",
-body = "Offipe needs a few pieces of information to dial *99# on your behalf and respond to the carrier's prompts. Your UPI ID, payment amount, and optional note stay in app memory during a session, and on success are saved to an encrypted on-device history. The carrier's reply text is shown to you and recorded for successful payments. Your active SIM's carrier name is read once on launch to detect Jio (which doesn't reliably support *99#). Your operation-mode preference and last balance are saved in a private on-device key-value store. Scanned or imported QR codes are decoded in memory only — they are never stored."
+            body = "Offipe needs a few pieces of information to dial *99# on your behalf and respond to the carrier's prompts. Your UPI ID, payment amount, and optional note stay in app memory during a session, and on success are saved to an encrypted on-device history. The carrier's reply text is shown to you and recorded for successful payments. Your active SIM's carrier name is read once on launch to detect Jio (which doesn't reliably support *99#). Your operation-mode preference and last balance are saved in a private on-device key-value store. Scanned or imported QR codes are decoded in memory only — they are never stored."
         )
         LegalSection(
             heading = "What Offipe does NOT collect",
@@ -71,7 +69,7 @@ body = "Offipe needs a few pieces of information to dial *99# on your behalf and
         )
         LegalSection(
             heading = "Your UPI PIN",
-body = "Your UPI PIN stays in volatile memory only and is wiped within 500 milliseconds of any session ending — success, failure, timeout, cancel, or app backgrounding. It is never written to storage, never logged, never sent over the network, and is masked as four bullets in any UI surface that might display it. The carrier-side handling of your PIN is the same path BHIM, GPay, and your bank's own app use."
+            body = "Your UPI PIN stays in volatile memory only and is wiped within 500 milliseconds of any session ending — success, failure, timeout, cancel, or app backgrounding. It is never written to storage, never logged, never sent over the network, and is masked as four bullets in any UI surface that might display it. The carrier-side handling of your PIN is the same path BHIM, GPay, and your bank's own app use."
         )
         LegalSection(
             heading = "Encrypted history",
@@ -95,7 +93,7 @@ body = "Your UPI PIN stays in volatile memory only and is wiped within 500 milli
         )
         LegalSection(
             heading = "Changes",
-body = "If we ever change how Offipe handles data, this screen will be updated, the effective date will be bumped, and the change will be highlighted in the corresponding release notes. The repository's git history is the canonical record of every revision."
+            body = "If we ever change how Offipe handles data, this screen will be updated, the effective date will be bumped, and the change will be highlighted in the corresponding release notes. The repository's git history is the canonical record of every revision."
         )
         LegalSection(
             heading = "Contact",
@@ -105,7 +103,7 @@ body = "If we ever change how Offipe handles data, this screen will be updated, 
 }
 
 /**
- * Terms of Use screen  reachable from Settings → "Legal" → "Terms of
+ * Terms of Use document — reachable from Settings → "Legal" → "Terms of
  * Use". Plain-language version of the boilerplate in TERMS.md.
  *
  * NOTE: This is a personal side-project app. We are not a registered
@@ -116,6 +114,7 @@ body = "If we ever change how Offipe handles data, this screen will be updated, 
 @Composable
 fun TermsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     LegalDocumentScaffold(
+        tag = "Legal · Terms",
         title = "Terms of Use",
         effectiveDate = EFFECTIVE_DATE,
         onClose = onClose,
@@ -123,7 +122,7 @@ fun TermsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         LegalSection(
             heading = "About Offipe",
-body = "Offipe is a side project published by Lakshya and Harsh. It is a free, unofficial Android client that automates India's *99# USSD service so you can use UPI without an internet connection. Offipe is NOT a registered payment service and is NOT affiliated with NPCI, your bank, your telecom carrier, or any payment service provider. Every transaction is processed by your bank and your carrier through the same *99# infrastructure that powers BHIM and other licensed apps. Offipe only automates the on-screen interaction."
+            body = "Offipe is a side project published by Lakshya and Harsh. It is a free, unofficial Android client that automates India's *99# USSD service so you can use UPI without an internet connection. Offipe is NOT a registered payment service and is NOT affiliated with NPCI, your bank, your telecom carrier, or any payment service provider. Every transaction is processed by your bank and your carrier through the same *99# infrastructure that powers BHIM and other licensed apps. Offipe only automates the on-screen interaction."
         )
         LegalSection(
             heading = "Eligibility",
@@ -131,7 +130,7 @@ body = "Offipe is a side project published by Lakshya and Harsh. It is a free, u
         )
         LegalSection(
             heading = "What you can expect",
-body = "Offipe is provided AS IS, on a best-effort basis. We try to make it work reliably across carriers, devices, and Android versions, but we cannot guarantee that every payment will succeed every time. Carrier networks, bank PSPs, and Android device makers can change behavior without notice. If a payment fails for any reason, the carrier will surface the error and Offipe will pass it on to you verbatim, but we have no ability to reverse, refund, or compensate any transaction."
+            body = "Offipe is provided AS IS, on a best-effort basis. We try to make it work reliably across carriers, devices, and Android versions, but we cannot guarantee that every payment will succeed every time. Carrier networks, bank PSPs, and Android device makers can change behavior without notice. If a payment fails for any reason, the carrier will surface the error and Offipe will pass it on to you verbatim, but we have no ability to reverse, refund, or compensate any transaction."
         )
         LegalSection(
             heading = "Your responsibilities",
@@ -155,19 +154,19 @@ body = "Offipe is provided AS IS, on a best-effort basis. We try to make it work
         )
         LegalSection(
             heading = "Carrier and bank charges",
-body = "Your telecom carrier may charge a small per-session fee for *99# usage as defined by TRAI tariffs (typically up to ₹0.50 per session). Offipe does not see, control, or share in any such fee. Your bank's UPI transaction limits and rules apply unchanged."
+            body = "Your telecom carrier may charge a small per-session fee for *99# usage as defined by TRAI tariffs (typically up to ₹0.50 per session). Offipe does not see, control, or share in any such fee. Your bank's UPI transaction limits and rules apply unchanged."
         )
         LegalSection(
             heading = "Things you must not do",
-body = "You must not use Offipe to send payments to anyone other than the intended recipient, to attempt fraud, money laundering, or any activity that violates Indian law or your bank's terms. You must not reverse-engineer, repackage, or redistribute Offipe in modified form without complying with the project's open-source licence (MIT). You must not use the accessibility service for anything other than the intended USSD automation flow within the app itself."
+            body = "You must not use Offipe to send payments to anyone other than the intended recipient, to attempt fraud, money laundering, or any activity that violates Indian law or your bank's terms. You must not reverse-engineer, repackage, or redistribute Offipe in modified form without complying with the project's open-source licence (MIT). You must not use the accessibility service for anything other than the intended USSD automation flow within the app itself."
         )
         LegalSection(
             heading = "Limitation of liability",
-body = "To the maximum extent permitted by law, Offipe's authors are not liable for any direct, indirect, incidental, or consequential loss arising from your use of the app — including lost funds, missed payments, carrier downtime, locked PINs, device-specific quirks, or third-party fees. Your sole remedy if you are unhappy with Offipe is to stop using it and uninstall it."
+            body = "To the maximum extent permitted by law, Offipe's authors are not liable for any direct, indirect, incidental, or consequential loss arising from your use of the app — including lost funds, missed payments, carrier downtime, locked PINs, device-specific quirks, or third-party fees. Your sole remedy if you are unhappy with Offipe is to stop using it and uninstall it."
         )
         LegalSection(
             heading = "Open source and warranty",
-body = "Offipe is open source under the MIT licence. The full source is published on GitHub. The MIT licence text governs your right to copy, modify, and redistribute the code, and explicitly disclaims warranties on the software."
+            body = "Offipe is open source under the MIT licence. The full source is published on GitHub. The MIT licence text governs your right to copy, modify, and redistribute the code, and explicitly disclaims warranties on the software."
         )
         LegalSection(
             heading = "Changes to these terms",
@@ -185,75 +184,56 @@ body = "Offipe is open source under the MIT licence. The full source is publishe
 }
 
 /**
- * Merged legal screen — Privacy Policy + Terms of Use in a single
- * screen with a toggle at the top to switch between them.
+ * Merged legal reader — Privacy Policy + Terms of Use in one document,
+ * switched with a segmented key under the status strip. The legacy
+ * Privacy/Terms routes land here too.
  */
 @Composable
-fun LegalScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
-    var showTerms by remember { mutableStateOf(false) }
+fun LegalScreen(
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    initialTab: Int = 0
+) {
+    var showTerms by remember { mutableStateOf(initialTab == 1) }
 
     Column(
         modifier
             .fillMaxSize()
-            .background(OffipeColors.Black)
+            .background(OffipeColors.Canvas)
             .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CloseChip(onClick = onClose)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = "Legal",
-                style = OffipeType.HeadlineLarge,
-                color = OffipeColors.TextPrimary
-            )
-        }
+        LegalStatusStrip(tag = "Legal", onClose = onClose)
 
-        // Tab toggle
-        Row(
-            Modifier
+        Spacer(Modifier.height(14.dp))
+        Segmented(
+            options = listOf("Privacy Policy", "Terms of Use"),
+            selectedIndex = if (showTerms) 1 else 0,
+            onSelect = { i -> showTerms = i == 1 },
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            LegalTab(
-                label = "Privacy Policy",
-                selected = !showTerms,
-                onClick = { showTerms = false },
-                modifier = Modifier.weight(1f)
-            )
-            LegalTab(
-                label = "Terms of Use",
-                selected = showTerms,
-                onClick = { showTerms = true },
-                modifier = Modifier.weight(1f)
-            )
-        }
+        )
+        Spacer(Modifier.height(16.dp))
 
         Column(
             Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+                .padding(horizontal = 22.dp)
+                .padding(bottom = 36.dp)
         ) {
+            Tag("Effective $EFFECTIVE_DATE · Plain language", color = OffipeColors.TextMuted)
+            Spacer(Modifier.height(10.dp))
             Text(
-                text = "Effective $EFFECTIVE_DATE",
-                style = OffipeType.LabelSmall,
-                color = OffipeColors.TextMuted
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Plain-language version. Read this in full — it covers what we do and don't do with your data, and what you're agreeing to when you use Offipe.",
+                text = "Plain-language version. Read this in full — it covers what we do " +
+                    "and don't do with your data, and what you're agreeing to when you " +
+                    "use Offipe.",
                 style = OffipeType.BodyMedium,
                 color = OffipeColors.TextSecondary
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(6.dp))
 
             if (!showTerms) {
                 PrivacyContent()
@@ -264,31 +244,104 @@ fun LegalScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+// ─── Document chrome ─────────────────────────────────────────────────────────
+
 @Composable
-private fun LegalTab(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val view = LocalView.current
-    Box(
-        modifier
-            .background(if (selected) OffipeColors.Accent else OffipeColors.SurfaceHigh)
-            .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = OffipeType.LabelMedium,
-            color = if (selected) OffipeColors.Black else OffipeColors.TextSecondary
-        )
+private fun LegalStatusStrip(tag: String, onClose: () -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconKey(
+                icon = Icons.Default.Close,
+                contentDescription = "Close",
+                onClick = onClose,
+                size = 38.dp,
+                tint = OffipeColors.TextSecondary
+            )
+            Spacer(Modifier.width(12.dp))
+            Tag(tag, color = OffipeColors.TextSecondary)
+        }
+        Hairline()
     }
 }
+
+@Composable
+private fun LegalDocumentScaffold(
+    tag: String,
+    title: String,
+    effectiveDate: String,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(OffipeColors.Canvas)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        LegalStatusStrip(tag = tag, onClose = onClose)
+
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp)
+                .padding(top = 20.dp, bottom = 36.dp)
+        ) {
+            Text(
+                text = title,
+                style = OffipeType.DisplaySmall,
+                color = OffipeColors.TextPrimary
+            )
+            Spacer(Modifier.height(12.dp))
+            Tag("Effective $effectiveDate · Plain language", color = OffipeColors.TextMuted)
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Plain-language version. Read this in full it covers what we do " +
+                    "and don't do with your data, and what you're agreeing to when you " +
+                    "use Offipe.",
+                style = OffipeType.BodyMedium,
+                color = OffipeColors.TextSecondary
+            )
+            Spacer(Modifier.height(6.dp))
+            content()
+        }
+    }
+}
+
+/** Ruled document section — mono uppercase heading over sans body copy. */
+@Composable
+private fun LegalSection(heading: String, body: String) {
+    Column(Modifier.fillMaxWidth()) {
+        Hairline()
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 18.dp)
+        ) {
+            Text(
+                text = heading.uppercase(),
+                style = OffipeType.TitleLarge,
+                color = OffipeColors.TextPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = body,
+                style = OffipeType.BodyMedium,
+                color = OffipeColors.TextSecondary
+            )
+        }
+    }
+}
+
+// ─── Body copy ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun PrivacyContent() {
@@ -401,101 +454,3 @@ private fun TermsContent() {
         body = "For questions about these terms, open an issue on the project's GitHub repository or email the maintainers via the contact info on the repo."
     )
 }
-
-// ─── Internal layout primitives ────────────────────────────────────────────────
-
-@Composable
-private fun LegalDocumentScaffold(
-    title: String,
-    effectiveDate: String,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(OffipeColors.Black)
-            .statusBarsPadding()
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CloseChip(onClick = onClose)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = title,
-                style = OffipeType.HeadlineLarge,
-                color = OffipeColors.TextPrimary
-            )
-        }
-
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            Text(
-                text = "Effective $effectiveDate",
-                style = OffipeType.LabelSmall,
-                color = OffipeColors.TextMuted
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Plain-language version. Read this in full it covers what we do and don't do with your data, and what you're agreeing to when you use Offipe.",
-                style = OffipeType.BodyMedium,
-                color = OffipeColors.TextSecondary
-            )
-            Spacer(Modifier.height(24.dp))
-            content()
-        }
-    }
-}
-
-@Composable
-private fun LegalSection(heading: String, body: String) {
-    OffipeCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Text(
-                text = heading.uppercase(),
-                style = OffipeType.LabelMedium,
-                color = OffipeColors.Accent
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = body,
-                style = OffipeType.BodyMedium,
-                color = OffipeColors.TextPrimary
-            )
-        }
-    }
-    Spacer(Modifier.height(14.dp))
-}
-
-@Composable
-private fun CloseChip(onClick: () -> Unit) {
-    val view = LocalView.current
-    Box(
-        Modifier
-            .size(40.dp)
-            .background(OffipeColors.Surface)
-            .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "Close",
-            tint = OffipeColors.TextPrimary
-        )
-    }
-}
-
-

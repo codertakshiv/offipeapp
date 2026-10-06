@@ -8,80 +8,83 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 /**
- * Offipe typography. Default sans for body, monospace for amounts/codes.
+ * Offipe typography — one strong sans family, hierarchy through weight
+ * and size.
  *
- * Refinements applied for the polish pass:
- *  - Display headlines: tighter letter-spacing (-0.04em) and tighter
- *    line-height (1.05) for that mechanical technical feel.
- *  - Section labels: 11sp uppercase, +0.12em letter-spacing, weight 600.
- *  - Body shrunk to 15sp regular (was 16) with relaxed 1.45 line-height
- *    so cards don't feel chunky.
- *  - Captions: 12sp +0.08em.
- *  - Mono amounts: bumped to weight 700 with `tnum` font feature for
- *    tabular spacing (digits align in columns).
+ *  - Display sizes are heavy and tightly tracked: screen titles and
+ *    hero statements ("Pay Offline.", "Payment Successful").
+ *  - Amounts are the same sans, bold with tabular figures (`tnum`) so
+ *    digits never jitter as they change.
+ *  - Labels are small, medium-weight, slightly tracked uppercase — the
+ *    quiet wayfinding layer (field labels, section overlines, tags).
  */
 object OffipeType {
     val Display = FontFamily.SansSerif
     val Body = FontFamily.SansSerif
-    val MonoFamily = FontFamily.Monospace
+    val MonoFamily = FontFamily.SansSerif
 
     val DisplayLarge = TextStyle(
         fontFamily = Display,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 32.sp,
-        letterSpacing = (-0.04).em,
-        lineHeight = 34.sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 40.sp,
+        letterSpacing = (-0.03).em,
+        lineHeight = 44.sp
     )
     val DisplayMedium = TextStyle(
         fontFamily = Display,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 28.sp,
-        letterSpacing = (-0.04).em,
-        lineHeight = 30.sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 30.sp,
+        letterSpacing = (-0.02).em,
+        lineHeight = 36.sp
     )
     val DisplaySmall = TextStyle(
         fontFamily = Display,
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        letterSpacing = (-0.03).em,
-        lineHeight = 24.sp
+        fontSize = 24.sp,
+        letterSpacing = (-0.015).em,
+        lineHeight = 30.sp
     )
     val HeadlineLarge = TextStyle(
         fontFamily = Display,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        letterSpacing = (-0.02).em,
-        lineHeight = 26.sp
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 19.sp,
+        letterSpacing = (-0.01).em,
+        lineHeight = 25.sp
     )
     val TitleLarge = TextStyle(
-        fontFamily = Body,
+        fontFamily = Display,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 17.sp,
+        fontSize = 16.sp,
+        letterSpacing = 0.em,
         lineHeight = 22.sp
     )
     val TitleMedium = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Medium,
         fontSize = 15.sp,
+        letterSpacing = (-0.005).em,
         lineHeight = 20.sp
     )
     val BodyLarge = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
-        lineHeight = 22.sp
+        letterSpacing = 0.002.em,
+        lineHeight = 23.sp
     )
     val BodyMedium = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp
+        letterSpacing = 0.002.em,
+        lineHeight = 21.sp
     )
     val BodySmall = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 17.sp
+        fontSize = 12.5.sp,
+        letterSpacing = 0.005.em,
+        lineHeight = 18.sp
     )
     val LabelLarge = TextStyle(
         fontFamily = Body,
@@ -92,14 +95,14 @@ object OffipeType {
     val LabelMedium = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        letterSpacing = 0.02.em
+        fontSize = 13.sp,
+        letterSpacing = 0.01.em
     )
     val LabelSmall = TextStyle(
         fontFamily = Body,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        letterSpacing = 0.02.em
+        letterSpacing = 0.06.em
     )
     val Mono = TextStyle(
         fontFamily = MonoFamily,
@@ -107,20 +110,59 @@ object OffipeType {
         fontSize = 13.sp,
         fontFeatureSettings = "tnum"
     )
-    val MonoLarge = TextStyle(
+    /** Small uppercase overline — field labels, section headers, tags. */
+    val TerminalLabel = TextStyle(
+        fontFamily = Body,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        letterSpacing = 0.10.em
+    )
+
+    /** Pay screen — the amount readout. Bold, huge, tabular. */
+    val AmountHero = TextStyle(
         fontFamily = MonoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        letterSpacing = (-0.02).em,
+        fontSize = 52.sp,
+        letterSpacing = (-0.04).em,
+        lineHeight = 56.sp,
         fontFeatureSettings = "tnum"
     )
 
-    /** Bold tabular monospace, intended for prominent amounts ("₹ 12,345.67"). */
-    val MonoAmount = TextStyle(
+    /** Balance screen — the balance figure, one step below hero. */
+    val AmountBalance = TextStyle(
         fontFamily = MonoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 15.sp,
+        fontSize = 40.sp,
+        letterSpacing = (-0.035).em,
+        lineHeight = 46.sp,
         fontFeatureSettings = "tnum"
+    )
+
+    /** Inline money at large size (session results, expanded rows). */
+    val AmountLg = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        letterSpacing = (-0.02).em,
+        lineHeight = 30.sp,
+        fontFeatureSettings = "tnum"
+    )
+
+    /** Inline money at medium size (ledger rows). */
+    val AmountMd = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        letterSpacing = (-0.01).em,
+        fontFeatureSettings = "tnum"
+    )
+
+    /** Keypad key digits — bold, centered. */
+    val KeyDigit = TextStyle(
+        fontFamily = MonoFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 24.sp,
+        letterSpacing = 0.em
     )
 }
 

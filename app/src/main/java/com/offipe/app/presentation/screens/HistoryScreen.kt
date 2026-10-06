@@ -2,18 +2,12 @@ package com.offipe.app.presentation.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,40 +16,45 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.offipe.app.data.TransactionEntity
 import com.offipe.app.presentation.HistoryViewModel
-import com.offipe.app.presentation.ui.components.OffipeCard
+import com.offipe.app.presentation.ui.components.GhostActionBar
+import com.offipe.app.presentation.ui.components.Hairline
+import com.offipe.app.presentation.ui.components.IconKey
+import com.offipe.app.presentation.ui.components.LedDot
+import com.offipe.app.presentation.ui.components.OffipeDialog
+import com.offipe.app.presentation.ui.components.PrimaryActionBar
+import com.offipe.app.presentation.ui.components.Tag
+import com.offipe.app.presentation.ui.components.TextKey
 import com.offipe.app.presentation.ui.theme.OffipeColors
 import com.offipe.app.presentation.ui.theme.OffipeType
 import java.text.SimpleDateFormat
@@ -63,12 +62,16 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Transaction history with per-item delete via swipe-from-right or
- * long-press, and "CLEAR ALL" with a confirm sheet at the top.
+ * HISTORY — the reference's transaction list.
  *
- * Tapping a row expands it to show the carrier reply plus a "Pay again"
- * shortcut that navigates back to the Pay screen pre-filled with this
- * transaction's recipient + amount + note.
+ * Chronological rows: a pastel-green outgoing chip (payment completed),
+ * payee/VPA + relative time, amount right-aligned, hairlines between.
+ * Tap expands a row into its carrier reply with PAY AGAIN / DELETE;
+ * swipe left or long-press also deletes (confirm dialogs unchanged).
+ * CLEAR sits in the header.
+ *
+ * No Sent/Received filter: every record in this ledger is a payment the
+ * user sent, so a second tab would be an empty fake.
  */
 @Composable
 fun HistoryScreen(
@@ -87,256 +90,145 @@ fun HistoryScreen(
             .fillMaxSize()
             .background(OffipeColors.Black)
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .navigationBarsPadding()
     ) {
-        Header(
-            count = txns.size,
-            onClose = onClose,
-            onClearAll = { showClearAllDialog = true }
-        )
-        Spacer(Modifier.height(20.dp))
+        // ── Header ──
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconKey(
+                icon = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                onClick = onClose,
+                size = 42.dp,
+                tint = OffipeColors.TextSecondary
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "History",
+                    style = OffipeType.DisplaySmall,
+                    color = OffipeColors.TextPrimary
+                )
+                Spacer(Modifier.height(3.dp))
+                Tag(
+                    if (txns.isNotEmpty()) {
+                        "${txns.size} record${if (txns.size == 1) "" else "s"}"
+                    } else "No records",
+                    color = OffipeColors.TextSecondary
+                )
+            }
+            if (txns.isNotEmpty()) {
+                TextKey(
+                    text = "Clear",
+                    onClick = { showClearAllDialog = true },
+                    color = OffipeColors.Danger
+                )
+            }
+        }
 
         if (txns.isEmpty()) {
             EmptyState(onPay = onPay, modifier = Modifier.fillMaxSize())
         } else {
-            LazyColumn(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            LazyColumn(Modifier.weight(1f)) {
                 items(items = txns, key = { it.id }) { txn ->
-                    SwipeableTransactionCard(
+                    SwipeableLedgerRow(
                         txn = txn,
                         onDelete = { viewModel.deleteTransaction(txn.id) },
                         onLongPress = { pendingDelete = txn },
                         onPayAgain = { onPayAgain(txn) }
                     )
+                    Hairline()
                 }
-                item { Spacer(Modifier.height(40.dp)) }
+                item { Spacer(Modifier.height(28.dp)) }
             }
         }
     }
 
     if (showClearAllDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearAllDialog = false },
-            title = { Text("Delete all transactions?", style = OffipeType.HeadlineLarge) },
-            text = {
-                Text(
-                    text = "This will permanently remove every transaction from your history. This cannot be undone.",
-                    style = OffipeType.BodyMedium
-                )
+        OffipeDialog(
+            title = "Delete all transactions?",
+            message = "This will permanently remove every transaction from your " +
+                "history. This cannot be undone.",
+            confirmLabel = "Delete all",
+            onConfirm = {
+                viewModel.clearHistory()
+                showClearAllDialog = false
             },
-            confirmButton = {
-                Box(
-                    Modifier.clickable {
-                        viewModel.clearHistory()
-                        showClearAllDialog = false
-                    }
-                ) {
-                    Text(
-                        text = "Delete all",
-                        style = OffipeType.LabelLarge,
-                        color = OffipeColors.Danger,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            },
-            dismissButton = {
-                Box(
-                    Modifier.clickable { showClearAllDialog = false }
-                ) {
-                    Text(
-                        text = "Cancel",
-                        style = OffipeType.LabelLarge,
-                        color = OffipeColors.TextSecondary,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            },
-            containerColor = OffipeColors.SurfaceHigh,
-            titleContentColor = OffipeColors.TextPrimary,
-            textContentColor = OffipeColors.TextSecondary
+            onDismiss = { showClearAllDialog = false },
+            danger = true
         )
     }
 
     pendingDelete?.let { txn ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete this transaction?", style = OffipeType.HeadlineLarge) },
-            text = {
-                Text(
-                    text = "₹${txn.amount} sent to ${txn.vpa}. This cannot be undone.",
-                    style = OffipeType.BodyMedium
-                )
+        OffipeDialog(
+            title = "Delete this transaction?",
+            message = "₹${txn.amount} sent to ${txn.vpa}. This cannot be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                viewModel.deleteTransaction(txn.id)
+                pendingDelete = null
             },
-            confirmButton = {
-                Box(
-                    Modifier.clickable {
-                        viewModel.deleteTransaction(txn.id)
-                        pendingDelete = null
-                    }
-                ) {
-                    Text(
-                        text = "Delete",
-                        style = OffipeType.LabelLarge,
-                        color = OffipeColors.Danger,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            },
-            dismissButton = {
-                Box(
-                    Modifier.clickable { pendingDelete = null }
-                ) {
-                    Text(
-                        text = "Cancel",
-                        style = OffipeType.LabelLarge,
-                        color = OffipeColors.TextSecondary,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            },
-            containerColor = OffipeColors.SurfaceHigh,
-            titleContentColor = OffipeColors.TextPrimary,
-            textContentColor = OffipeColors.TextSecondary
+            onDismiss = { pendingDelete = null },
+            danger = true
         )
     }
 }
 
-@Composable
-private fun Header(count: Int, onClose: () -> Unit, onClearAll: () -> Unit) {
-    val view = LocalView.current
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        CornerIconButton(
-            icon = Icons.Default.ArrowBack,
-            contentDescription = "Back",
-            onClick = onClose
-        )
-        Spacer(Modifier.size(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = "Transactions",
-                style = OffipeType.LabelMedium,
-                color = OffipeColors.Accent
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = if (count > 0) "$count transaction${if (count == 1) "" else "s"}" else "no transactions",
-                style = OffipeType.BodySmall,
-                color = OffipeColors.TextMuted
-            )
-        }
-        if (count > 0) {
-            Box(
-                Modifier
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        onClearAll()
-                    }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "Delete all",
-                    style = OffipeType.LabelMedium,
-                    color = OffipeColors.Danger
-                )
-            }
-        }
-    }
-}
-
-/**
- * 40dp tap-target with a subtle 12% white hairline ring and a 0.92
- * scale-on-press feedback. Mirrors the FAQ corner button.
- */
-@Composable
-private fun CornerIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit
-) {
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessHigh
-        ),
-        label = "history_close_scale"
-    )
-    Box(
-        Modifier
-            .size(40.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .drawBehind {
-                drawRect(
-                    color = OffipeColors.TextPrimary.copy(alpha = 0.12f),
-                    style = Stroke(width = 1f)
-                )
-            }
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = OffipeColors.TextPrimary
-        )
-    }
-}
+// ─── Empty state ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun EmptyState(onPay: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier,
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
+    Column(modifier, verticalArrangement = Arrangement.Center) {
+        Column(
             Modifier
-                .size(10.dp)
-                .background(OffipeColors.Accent)
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = "no transactions yet",
-            style = OffipeType.HeadlineLarge,
-            color = OffipeColors.TextPrimary
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "your payments will show up here",
-            style = OffipeType.BodyMedium,
-            color = OffipeColors.TextMuted
-        )
-        Spacer(Modifier.height(24.dp))
-        Box(
-            Modifier
-                .clickable { onPay() }
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(OffipeColors.SurfaceHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.NorthEast,
+                    contentDescription = null,
+                    tint = OffipeColors.TextMuted,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Spacer(Modifier.height(18.dp))
             Text(
-                text = "Make a payment",
-                style = OffipeType.LabelLarge,
-                color = OffipeColors.Accent
+                text = "No payments yet",
+                style = OffipeType.DisplaySmall,
+                color = OffipeColors.TextPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Your payments will show up here.",
+                style = OffipeType.BodyMedium,
+                color = OffipeColors.TextMuted
             )
         }
+        Spacer(Modifier.weight(1f))
+        PrimaryActionBar(
+            text = "Make a payment",
+            onClick = onPay,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
+// ─── Ledger rows ──────────────────────────────────────────────────────────────
+
 @Composable
-private fun SwipeableTransactionCard(
+private fun SwipeableLedgerRow(
     txn: TransactionEntity,
     onDelete: () -> Unit,
     onLongPress: () -> Unit,
@@ -356,8 +248,6 @@ private fun SwipeableTransactionCard(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            // Clean reveal: surface-coloured row that just shows a trash
-            // icon at the trailing edge — no full-width red wash.
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -370,129 +260,149 @@ private fun SwipeableTransactionCard(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
                     tint = OffipeColors.Danger,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         },
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true
     ) {
-        TransactionCard(txn = txn, onLongPress = onLongPress, onPayAgain = onPayAgain)
+        LedgerRow(
+            txn = txn,
+            onLongPress = onLongPress,
+            onPayAgain = onPayAgain,
+            onDelete = onDelete
+        )
     }
 }
 
 @Composable
-private fun TransactionCard(
+private fun LedgerRow(
     txn: TransactionEntity,
     onLongPress: () -> Unit,
-    onPayAgain: () -> Unit
+    onPayAgain: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     val view = LocalView.current
+    val title = txn.payeeName ?: txn.vpa
 
-    OffipeCard(
-        modifier = Modifier
+    Column(
+        Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded }
+            .background(OffipeColors.Black)
             .pointerInput(txn.id) {
                 detectTapGestures(
                     onLongPress = {
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                         onLongPress()
                     },
-                    onTap = { expanded = !expanded }
+                    onTap = {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        expanded = !expanded
+                    }
                 )
             }
+            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        Column {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Completed outgoing chip — pastel green, arrow out
+            Box(
+                Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(OffipeColors.Success),
+                contentAlignment = Alignment.Center
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = txn.vpa,
-                        style = OffipeType.Mono.copy(
-                            color = OffipeColors.TextPrimary,
-                            fontSize = 14.sp
-                        )
-                    )
-                    Spacer(Modifier.height(4.dp))
+                Icon(
+                    imageVector = Icons.Default.NorthEast,
+                    contentDescription = "Sent",
+                    tint = OffipeColors.Black,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(Modifier.width(13.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = OffipeType.TitleMedium,
+                    color = OffipeColors.TextPrimary,
+                    maxLines = 1
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LedDot(size = 5.dp, color = OffipeColors.Success)
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = formatTimestamp(txn.timestamp),
                         style = OffipeType.BodySmall,
                         color = OffipeColors.TextMuted
                     )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    StatusPill()
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "₹${txn.amount}",
-                        style = OffipeType.MonoAmount.copy(
-                            color = OffipeColors.TextPrimary,
-                            fontSize = 17.sp
+                    if (txn.payeeName != null) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = txn.vpa,
+                            style = OffipeType.BodySmall,
+                            color = OffipeColors.TextMuted,
+                            maxLines = 1
                         )
-                    )
+                    }
                 }
             }
-            if (!txn.note.isNullOrBlank()) {
-                Spacer(Modifier.height(8.dp))
+
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "₹${txn.amount}",
+                style = OffipeType.AmountMd,
+                color = OffipeColors.TextPrimary
+            )
+        }
+
+        if (!txn.note.isNullOrBlank()) {
+            Spacer(Modifier.height(7.dp))
+            Text(
+                text = txn.note,
+                style = OffipeType.BodySmall,
+                color = OffipeColors.TextSecondary,
+                modifier = Modifier.padding(start = 51.dp)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(Modifier.height(12.dp))
+                Hairline()
+                Spacer(Modifier.height(11.dp))
+                Tag("Carrier reply", color = OffipeColors.TextMuted)
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = txn.note,
-                    style = OffipeType.BodySmall,
+                    text = txn.carrierReply,
+                    style = OffipeType.BodyMedium,
                     color = OffipeColors.TextSecondary
                 )
-            }
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(OffipeColors.Border)
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = "Carrier reply",
-                        style = OffipeType.LabelSmall,
-                        color = OffipeColors.TextMuted
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = txn.carrierReply,
-                        style = OffipeType.BodyMedium,
-                        color = OffipeColors.TextSecondary
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    // "Pay again" — repeats this transaction by routing the
-                    // user back to the Pay screen with VPA + amount + note
-                    // pre-filled. The Pay flow then validates the form and
-                    // requests PIN as usual; we never resend money silently.
-                    PayAgainButton(onClick = onPayAgain)
+                Spacer(Modifier.height(14.dp))
+                // "Pay again" — routes back to Pay with VPA + amount + note
+                // pre-filled; the form still validates + requests PIN.
+                GhostActionBar(
+                    text = "Pay again",
+                    onClick = onPayAgain,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 48.dp
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    TextKey(text = "Delete record", onClick = onDelete, color = OffipeColors.Danger)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun StatusPill() {
-    Box(
-        Modifier
-            .background(OffipeColors.Accent.copy(alpha = 0.15f))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    ) {
-        Text(
-            text = "completed",
-            style = OffipeType.LabelSmall,
-            color = OffipeColors.Accent
-        )
     }
 }
 
@@ -501,65 +411,8 @@ private fun formatTimestamp(ts: Long): String {
     val delta = now - ts
     if (delta < 60_000) return "Just now"
     if (delta < 3_600_000) return "${delta / 60_000} min ago"
-    val sdf = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
+    if (delta < 86_400_000) return "${delta / 3_600_000} hours ago"
+    if (delta < 172_800_000) return "Yesterday"
+    val sdf = SimpleDateFormat("d MMM", Locale.getDefault())
     return sdf.format(Date(ts))
 }
-
-/**
- * Compact "Pay again" affordance shown inside an expanded transaction
- * row. Lime accent border + replay icon + label, full-width, scales down
- * on press. Triggers the host's onPayAgain callback which routes back to
- * the Pay screen with the VPA / amount / note pre-filled.
- */
-@Composable
-private fun PayAgainButton(onClick: () -> Unit) {
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessHigh
-        ),
-        label = "pay_again_scale"
-    )
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .background(OffipeColors.Accent.copy(alpha = 0.10f))
-            .drawBehind {
-                drawRect(
-                    color = OffipeColors.Accent,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-            }
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            }
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.Replay,
-                contentDescription = null,
-                tint = OffipeColors.Accent,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(Modifier.size(8.dp))
-            Text(
-                text = "Pay again",
-                style = OffipeType.LabelLarge,
-                color = OffipeColors.Accent
-            )
-        }
-    }
-}
-
-

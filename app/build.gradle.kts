@@ -31,6 +31,17 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Package only the ABIs physical Android devices use (armeabi-v7a +
+        // arm64-v8a). x86/x86_64 exist solely for desktop emulators and add
+        // ~19.7 MB of native libraries nobody installs on a phone. Pass
+        // -PwithDesktopAbis to build an emulator/instrumented-test APK.
+        ndk {
+            abiFilters += setOf("armeabi-v7a", "arm64-v8a")
+            if (project.hasProperty("withDesktopAbis")) {
+                abiFilters += setOf("x86", "x86_64")
+            }
+        }
     }
 
     signingConfigs {

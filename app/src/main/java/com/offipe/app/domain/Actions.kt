@@ -58,18 +58,23 @@ object Actions {
         Regex("account\\s+(not\\s+found|does\\s+not\\s+exist)", RegexOption.IGNORE_CASE),
         Regex("user\\s+not\\s+found", RegexOption.IGNORE_CASE),
 
-        // Self-pay
+        // Self-pay. "to" is optional — carriers also say "cannot pay
+        // yourself" / "cannot send self" without the preposition.
         Regex("(sender|payer).*(receiver|payee).*same|(receiver|payee).*(sender|payer).*same", RegexOption.IGNORE_CASE),
         Regex("\\bsame\\s+(account|vpa|user)\\b", RegexOption.IGNORE_CASE),
-        Regex("cannot\\s+(send|pay)\\s+to\\s+(self|yourself|same)", RegexOption.IGNORE_CASE),
+        Regex("cannot\\s+(send|pay)\\s+(to\\s+)?(self|yourself|same)", RegexOption.IGNORE_CASE),
 
-        // Funds / limit
-        Regex("insufficient\\s+(funds|balance)", RegexOption.IGNORE_CASE),
+        // Funds / limit. Carriers phrase the shortage both ways —
+        // "insufficient balance" and "balance insufficient" (and the
+        // abbreviated "Low balance" / "Cannot proceed" rejections).
+        Regex("insufficient\\s+(funds|balance)|balance\\s+(is\\s+)?insufficient", RegexOption.IGNORE_CASE),
+        Regex("low\\s+balance|cannot\\s+proceed", RegexOption.IGNORE_CASE),
         Regex("exceed(s|ed)?\\s+(limit|amount)|over\\s+limit", RegexOption.IGNORE_CASE),
 
         // Service availability
         Regex("service\\s+(unavailable|not\\s+available|down)", RegexOption.IGNORE_CASE),
-        Regex("try\\s+again\\s+later|temporarily\\s+unavailable", RegexOption.IGNORE_CASE),
+        Regex("try\\s+(again\\s+)?later|temporarily\\s+unavailable", RegexOption.IGNORE_CASE),
+        Regex("technical\\s+(error|issue|problem)", RegexOption.IGNORE_CASE),
         Regex("session\\s+(timed\\s+out|expired|terminated)", RegexOption.IGNORE_CASE),
 
         // *99# user-not-onboarded phrases — the carrier returns these when

@@ -17,6 +17,27 @@ object PreferencesKeys {
     val LAST_BALANCE_TEXT = stringPreferencesKey("last_balance_text")
     val LAST_BALANCE_TIMESTAMP = longPreferencesKey("last_balance_timestamp")
     val PIN_LENGTH = stringPreferencesKey("pin_length")
+    val USER_NAME = stringPreferencesKey("user_name")
+}
+
+/** Rules for the preferred name captured during first-run setup. */
+object UserNameRules {
+    const val MAX_LENGTH = 24
+
+    /**
+     * Normalises raw input into a displayable name: collapses internal
+     * whitespace, strips control characters and enforces [MAX_LENGTH].
+     * Returns "" for input with nothing displayable left.
+     */
+    fun sanitize(raw: String): String {
+        val cleaned = raw
+            .filter { it.code >= 0x20 && it != '\u007f' }
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .take(MAX_LENGTH)
+            .trimEnd()
+        return cleaned
+    }
 }
 
 class PreferencesRepository(private val dataStore: DataStore<Preferences>) {
@@ -113,6 +134,26 @@ class PreferencesRepository(private val dataStore: DataStore<Preferences>) {
         require(length in setOf(4, 6)) { "PIN length must be 4 or 6" }
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.PIN_LENGTH] = length.toString()
+        }
+    }
+
+    /**
+     * Preferred name from first-run setup. Empty string when the user
+     * skipped the step — persisted once, never asked again.
+     */
+    val userName: Flow<String> = dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.USER_NAME].orEmpty()
+    }
+
+    /** Persists (sanitised) preferred name. "" clears it. */
+    suspend fun setUserName(name: String) {
+        val sanitized = UserNameRules.sanitize(name)
+        dataStore.edit { preferences ->
+            if (sanitized.isEmpty()) {
+                preferences.remove(PreferencesKeys.USER_NAME)
+            } else {
+                preferences[PreferencesKeys.USER_NAME] = sanitized
+            }
         }
     }
 }

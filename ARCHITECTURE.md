@@ -173,13 +173,12 @@ The bridge between the pure domain and Android:
 - `OverlayController` (interface) + `OverlayControllerImpl` — the system-overlay window for Auto mode. (A floating progress chip variant for the legacy Advanced mode also exists in code but is no longer surfaced in the UI.)
 - `CarrierDetector` — reads the active SIM's carrier name and applies the Jio fail-fast rule.
 - `QrScannerManager` — CameraX preview + ML Kit barcode binding, plus a gallery decode helper.
-- `ApkShareUtil` — utility that exports the installed APK so users can share OffPay over Bluetooth or WhatsApp without a Play Store link.
 
 ### `presentation/`
 Everything Compose. Subdivided:
 
 - `presentation/` (top level) — three ViewModels (`PayViewModel`, `BalanceViewModel`, `HistoryViewModel`) and the single `MainActivity`.
-- `presentation/navigation/` — `Screen` route enum and `MainScaffold` (the bottom nav + NavHost).
+- `presentation/navigation/` — `Screen` route enum and `MainScaffold` (the NavHost, session overlay and hub chrome).
 - `presentation/screens/` — one Composable per top-level destination plus a small onboarding subpackage.
 - `presentation/permissions/` — runtime permission state + launchers (`PermissionState.kt`).
 - `presentation/ui/components/` — reusable widgets (cards, buttons, PIN boxes, snackbar, money-rain easter egg, etc.).
@@ -223,12 +222,6 @@ The runtime behaviour during a session is selected by `OperationMode`, persisted
 | `MANUAL`   | No                     | n/a                         | None                                        |
 
 `MANUAL` is the universal fallback — it copies the UPI ID to the clipboard, opens the system dialer with `*99*1*3#` already typed, and the user takes over from there. It does not require the accessibility service to be enabled and works on any Android device.
-
----
-
-## Web PWA
-
-A small companion PWA lives at **[offpay.vercel.app](https://offpay.vercel.app/)** for iOS users and anyone who can't install the APK. It implements the Manual-mode flow only — VPA + amount form, copy-to-clipboard, deep-link into the device dialer with `*99*1*3#` prefilled. The PWA is a separate codebase, not part of this Android repo.
 
 ---
 

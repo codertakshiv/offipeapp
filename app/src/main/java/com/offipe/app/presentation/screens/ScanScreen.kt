@@ -8,6 +8,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -15,31 +16,33 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,44 +59,51 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.offipe.app.platform.QrScannerManager
 import com.offipe.app.presentation.permissions.openAppDetailsSettings
-import com.offipe.app.presentation.ui.components.OffipeAccentCard
-import com.offipe.app.presentation.ui.components.OffipePrimaryButton
-import com.offipe.app.presentation.ui.components.OffipeSecondaryButton
+import com.offipe.app.presentation.ui.components.CornerFrame
+import com.offipe.app.presentation.ui.components.GhostActionBar
+import com.offipe.app.presentation.ui.components.IconKey
+import com.offipe.app.presentation.ui.components.PrimaryActionBar
 import com.offipe.app.presentation.ui.theme.OffipeColors
 import com.offipe.app.presentation.ui.theme.OffipeType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * iPhone-native, Paytm-style QR scanner.
+ * SCAN — point at a UPI QR.
  *
- * Visual identity:
- *  - Square viewfinder centered, 70% of min(W, H).
- *  - 60% black scrim outside the viewfinder (cutout via even-odd path).
- *  - Lime L-corner brackets that pulse subtly on idle, snap inward + turn
- *    white on detection.
- *  - Sweeping lime scan line with a soft glow trailing it.
- *  - Glassy circular buttons (torch / gallery / help) at the bottom.
- *  - Top: floating back chip (left) and zoom chip (right, tap to cycle 1×/2×/3×).
- *  - Pinch-to-zoom + tap-to-focus animations.
+ * Structure (per the reference):
+ *  1. Top bar: close key left. Exactly ONE torch control lives in the
+ *     bottom action row (labeled, with a live active state).
+ *  2. A framed square viewfinder — dimmed surround, hairline frame and
+ *     breathing corner brackets with corner illumination (no laser);
+ *     tap anywhere on the preview to focus (real metering, not a
+ *     decorative ring).
+ *  3. Caption: POINT AT A UPI QR CODE / SUPPORTS UPI QR · GALLERY IMPORT.
+ *  4. Bottom row: Torch / Gallery circle keys.
+ *
+ * The torch button drives the real flash through
+ * [QrScannerManager.setTorch]; its active state mirrors
+ * [QrScannerManager.onTorchStateChanged] (hardware truth), so the icon
+ * only lights when the flash is actually on.
  */
 @Composable
 fun ScanScreen(
@@ -132,8 +142,7 @@ fun ScanScreen(
             hasCameraPermission -> CameraScannerContent(
                 qrManager = qrManager,
                 onResult = onResult,
-                onClose = onClose,
-                onOpenFaq = onOpenFaq
+                onClose = onClose
             )
             else -> PermissionDeniedContent(
                 permanentlyDenied = permissionDenied,
@@ -149,8 +158,7 @@ fun ScanScreen(
 private fun CameraScannerContent(
     qrManager: QrScannerManager,
     onResult: (String) -> Unit,
-    onClose: () -> Unit,
-    onOpenFaq: () -> Unit
+    onClose: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -161,19 +169,6 @@ private fun CameraScannerContent(
     var torchOn by remember { mutableStateOf(false) }
     var detected by remember { mutableStateOf(false) }
     var focusTap by remember { mutableStateOf<Offset?>(null) }
-    var lastPinchAt by remember { mutableStateOf(0L) }
-    var showZoomSlider by remember { mutableStateOf(false) }
-
-    // Hide zoom slider 1s after pinch input stops
-    LaunchedEffect(lastPinchAt) {
-        if (lastPinchAt > 0) {
-            showZoomSlider = true
-            delay(1000)
-            if (System.currentTimeMillis() - lastPinchAt >= 950) {
-                showZoomSlider = false
-            }
-        }
-    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -190,136 +185,165 @@ private fun CameraScannerContent(
         }
     }
 
-    val previewView = remember { PreviewView(context) }
+    val previewView = remember {
+        PreviewView(context).apply {
+            // COMPATIBLE => TextureView. The default SurfaceView punches a
+            // separate layer through the window, which on several devices
+            // suppresses the system's edge back gesture (swipe-back did
+            // nothing while the in-app keys kept working). TextureView keeps
+            // the preview inside the normal view hierarchy, so back works.
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
+        // The single torch control tracks the hardware torch state.
+        qrManager.onTorchStateChanged = { on -> torchOn = on }
         qrManager.bindToLifecycle(lifecycleOwner, previewView) { raw ->
             if (!detected) {
                 detected = true
                 view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                // Brief 180ms hold so the lime corners get to snap into
-                // place + the success flash registers, then fade through
-                // and hand off. The dwell used to be 700ms but the user
-                // reported it felt buggy/slow; the visual "captured" cue
-                // is carried by the fade-out overlay (DetectionFlash).
+                // Brief 180ms hold so the lock flash registers, then hand
+                // off to the QR result screen.
                 scope.launch {
                     delay(180)
                     onResult(raw)
                 }
             }
         }
-        onDispose { qrManager.unbind() }
+        onDispose {
+            qrManager.unbind()
+            qrManager.onTorchStateChanged = null
+        }
+    }
+
+    fun toggleTorch() {
+        // State itself is set by onTorchStateChanged once the camera
+        // confirms the flash actually flipped.
+        if (qrManager.setTorch(!torchOn)) {
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Camera preview with pinch-to-zoom and tap-to-focus
+        // Camera preview. Gesture handling (pinch-zoom / tap-to-focus) lives on
+        // a sibling overlay instead of the AndroidView node, so the preview only
+        // ever renders frames and never participates in pointer dispatch.
         androidx.compose.ui.viewinterop.AndroidView(
             factory = { previewView },
-            modifier = Modifier
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Pinch-to-zoom and tap-to-focus, drawn over the preview but under the
+        // torch / gallery controls so those stay clickable.
+        Box(
+            Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTransformGestures { _, _, zoomDelta, _ ->
-                        zoomRatio = (zoomRatio * zoomDelta).coerceIn(
-                            QrScannerManager.MIN_ZOOM,
-                            QrScannerManager.MAX_ZOOM
-                        )
-                        qrManager.setZoomRatio(zoomRatio)
-                        lastPinchAt = System.currentTimeMillis()
+                        // A straight pan reports zoomDelta == 1: skip it so a
+                        // plain swipe (or the back gesture) doesn't queue a
+                        // camera-control request on every move event.
+                        if (zoomDelta != 1f) {
+                            zoomRatio = (zoomRatio * zoomDelta).coerceIn(
+                                QrScannerManager.MIN_ZOOM,
+                                QrScannerManager.MAX_ZOOM
+                            )
+                            qrManager.setZoomRatio(zoomRatio)
+                        }
                     }
                 }
                 .pointerInput(Unit) {
                     detectTapGestures { off ->
+                        // Real focus + metering at the tapped point.
+                        qrManager.focusAt(off.x, off.y)
                         focusTap = off
                     }
                 }
         )
 
-        // Viewfinder + scanline overlay
-        ViewfinderOverlay(detected = detected)
+        // Framed viewfinder (static dim layer + animated corner layer)
+        FrameViewfinder(detected = detected)
 
-        // Once detected, fade-to-black overlay smooths the hand-off to
-        // the Pay screen so the camera doesn't snap-cut away. Animates
-        // 0 → 1 alpha over 180ms in tandem with the navigation delay
-        // above; the success caption and lime corners stay visible
-        // through the fade.
+        // Fade-to-black hand-off on detection
         DetectionFadeOverlay(visible = detected)
 
-        // Focus ring animation
+        // Focus ring animation (visual feedback for the metering tap)
         focusTap?.let { tap ->
             FocusRing(at = tap, key = tap.toString(), onDone = { focusTap = null })
         }
 
-        // Top bar: back chip + zoom chip
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BackChip(onClick = onClose)
-            ZoomChip(
-                zoom = zoomRatio,
-                onClick = {
-                    val next = when {
-                        zoomRatio < 1.5f -> 2f
-                        zoomRatio < 2.5f -> 3f
-                        else -> 1f
-                    }
-                    zoomRatio = next
-                    qrManager.setZoomRatio(zoomRatio)
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                }
-            )
-        }
-
-        // Status text + bottom controls
         Column(
             Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
-            // Optional zoom slider during pinch
-            if (showZoomSlider) {
-                ZoomSlider(zoom = zoomRatio)
-                Spacer(Modifier.height(16.dp))
-            }
-            PointAtQrCaption(detected = detected)
-            Spacer(Modifier.height(20.dp))
+            // ── Top bar ──
             Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GlassyCircleButton(
-                    icon = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                    contentDescription = "Torch",
-                    diameter = 56.dp,
-                    onClick = { torchOn = !torchOn }
+                IconKey(
+                    icon = Icons.Default.Close,
+                    contentDescription = "Close",
+                    onClick = onClose,
+                    size = 44.dp,
+                    tint = OffipeColors.TextSecondary
                 )
-                GlassyCircleButton(
+                Spacer(Modifier.weight(1f))
+                if (!qrManager.flashAvailable) {
+                    Text(
+                        text = "No torch",
+                        style = OffipeType.TerminalLabel,
+                        color = OffipeColors.TextMuted
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // ── Caption ──
+            ScanCaption(detected = detected)
+
+            Spacer(Modifier.height(26.dp))
+
+            // ── Bottom action row ──
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 40.dp, vertical = 22.dp),
+                horizontalArrangement = Arrangement.spacedBy(
+                    58.dp,
+                    Alignment.CenterHorizontally
+                ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircleAction(
+                    icon = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                    label = if (torchOn) "Torch on" else "Torch",
+                    active = torchOn,
+                    onClick = ::toggleTorch
+                )
+                CircleAction(
                     icon = Icons.Default.PhotoLibrary,
-                    contentDescription = "Gallery",
-                    diameter = 64.dp,
+                    label = "Gallery",
                     onClick = {
                         galleryLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
                         )
                     }
-                )
-                GlassyCircleButton(
-                    icon = Icons.Default.HelpOutline,
-                    contentDescription = "Help",
-                    diameter = 56.dp,
-                    onClick = onOpenFaq
                 )
             }
         }
     }
 }
+
+// ─── Permission denied ────────────────────────────────────────────────────────
 
 @Composable
 private fun PermissionDeniedContent(
@@ -332,56 +356,46 @@ private fun PermissionDeniedContent(
         Modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        OffipeAccentCard(accent = OffipeColors.Accent, modifier = Modifier.fillMaxWidth()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier
-                        .size(72.dp)
-                        .background(OffipeColors.Black),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = null,
-                        tint = OffipeColors.Accent,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-                Spacer(Modifier.height(20.dp))
+        CornerFrame(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.padding(horizontal = 22.dp, vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    tint = OffipeColors.TextSecondary,
+                    modifier = Modifier.size(34.dp)
+                )
+                Spacer(Modifier.height(18.dp))
                 Text(
-                    text = "GRANT CAMERA ACCESS",
-                    style = OffipeType.LabelLarge,
-                    color = OffipeColors.Accent
+                    text = "Camera access required",
+                    style = OffipeType.TitleLarge,
+                    color = OffipeColors.TextPrimary
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "Offipe scans UPI QR codes to autofill payment details. " +
                         "Grant camera access to continue.",
                     style = OffipeType.BodyMedium,
-                    color = OffipeColors.TextSecondary
+                    color = OffipeColors.TextSecondary,
+                    textAlign = TextAlign.Center
                 )
             }
         }
         Spacer(Modifier.height(20.dp))
-        if (permanentlyDenied) {
-            OffipePrimaryButton(
-                text = "Open App Settings",
-                onClick = onOpenSettings,
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            OffipePrimaryButton(
-                text = "Grant Camera",
-                onClick = onGrant,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        OffipeSecondaryButton(
+        PrimaryActionBar(
+            text = if (permanentlyDenied) "Open app settings" else "Grant camera",
+            onClick = if (permanentlyDenied) onOpenSettings else onGrant,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(10.dp))
+        GhostActionBar(
             text = "Cancel",
             onClick = onClose,
             modifier = Modifier.fillMaxWidth()
@@ -389,110 +403,161 @@ private fun PermissionDeniedContent(
     }
 }
 
-// ─── Viewfinder ────────────────────────────────────────────────────────────────
+// ─── Viewfinder ───────────────────────────────────────────────────────────────
 
+/**
+ * Viewfinder feedback — deliberately built in two layers so the always-on
+ * "searching" animation never repaints the full screen (the camera preview
+ * must never stutter because of the overlay):
+ *
+ *  1. STATIC layer (full screen): dimmed surround, hairline frame and four
+ *     small focus ticks at the edge midpoints. It only redraws when
+ *     [detected] flips.
+ *  2. ANIMATED layer (frame-sized): corner brackets that breathe, soft
+ *     white corner illumination and a faint inner wash — the ONE continuous
+ *     animation left in the scanner. It locks to the pastel-green state the
+ *     moment a code is recognised.
+ *
+ * There is intentionally no sweeping laser line: searching is communicated
+ * by the frame itself, in the app's black/white/pastel language.
+ */
 @Composable
-private fun ViewfinderOverlay(detected: Boolean) {
-    val infinite = rememberInfiniteTransition(label = "scan")
-    val sweep by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sweep"
-    )
-    val pulse by infinite.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
+private fun FrameViewfinder(detected: Boolean) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Same framing maths as before: 72% of width, capped at 42% of height.
+        val side = minOf(maxWidth * 0.72f, maxHeight * 0.42f)
 
-    val cornerColor by animateColorAsState(
-        if (detected) OffipeColors.TextPrimary else OffipeColors.Accent,
-        label = "corner_color"
-    )
-    val cornerInset by animateFloatAsState(
-        targetValue = if (detected) 4f else 0f,
-        animationSpec = tween(180),
-        label = "corner_inset"
-    )
+        // ── Static layer — dim, hairline frame, focus ticks ──
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val left = (w - side.toPx()) / 2f
+            val top = (h - side.toPx()) / 2f
+            val sidePx = side.toPx()
 
-    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-        val sideLen = minOf(size.width, size.height) * 0.7f
-        val left = (size.width - sideLen) / 2f
-        val top = (size.height - sideLen) / 2f
-        val sq = androidx.compose.ui.geometry.Rect(
-            left + cornerInset.dp.toPx(),
-            top + cornerInset.dp.toPx(),
-            left + sideLen - cornerInset.dp.toPx(),
-            top + sideLen - cornerInset.dp.toPx()
+            val frame = Path().apply {
+                addRect(Rect(left, top, left + sidePx, top + sidePx))
+            }
+
+            // Dim everything outside the frame
+            val cutout = Path().apply {
+                addRect(Rect(0f, 0f, w, h))
+                addRect(Rect(left, top, left + sidePx, top + sidePx))
+                fillType = PathFillType.EvenOdd
+            }
+            drawPath(cutout, color = Color(0x99000000))
+
+            // Hairline frame — the quiet "target" of the scanner
+            drawPath(
+                path = frame,
+                color = if (detected) OffipeColors.Mark else Color.White.copy(alpha = 0.14f),
+                style = Stroke(width = 1f)
+            )
+
+            // Focus ticks at each edge midpoint (static recognition cue)
+            val tick = 10.dp.toPx()
+            val tickColor =
+                if (detected) OffipeColors.Mark else Color.White.copy(alpha = 0.35f)
+            val cx = left + sidePx / 2f
+            val cy = top + sidePx / 2f
+            drawLine(tickColor, Offset(cx - tick, top), Offset(cx + tick, top),
+                strokeWidth = 1.5f)
+            drawLine(tickColor, Offset(cx - tick, top + sidePx), Offset(cx + tick, top + sidePx),
+                strokeWidth = 1.5f)
+            drawLine(tickColor, Offset(left, cy - tick), Offset(left, cy + tick),
+                strokeWidth = 1.5f)
+            drawLine(tickColor, Offset(left + sidePx, cy - tick), Offset(left + sidePx, cy + tick),
+                strokeWidth = 1.5f)
+
+            // Lock tint
+            if (detected) {
+                drawPath(frame, color = OffipeColors.Mark.copy(alpha = 0.16f))
+            }
+        }
+
+        // ── Animated layer — one shared pulse, confined to the frame ──
+        val infinite = rememberInfiniteTransition(label = "scan")
+        // Read inside the draw block below so the frame breathes without
+        // recomposing the scanner on every animation frame.
+        val searchState = infinite.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1700, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "search"
+        )
+        val lockState = animateFloatAsState(
+            targetValue = if (detected) 1f else 0f,
+            animationSpec = tween(durationMillis = 240),
+            label = "lock"
         )
 
-        // Dim everything outside the viewfinder
-        val cutout = Path().apply {
-            addRect(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height))
-            addRect(sq)
-            fillType = PathFillType.EvenOdd
-        }
-        drawPath(cutout, color = Color(0x99000000)) // 60% black scrim
+        Canvas(
+            Modifier
+                .align(Alignment.Center)
+                .size(side)
+        ) {
+            val s = size.width
+            val search = searchState.value.coerceIn(0f, 1f)
+            val lock = lockState.value.coerceIn(0f, 1f)
+            val brackets = OffipeColors.TextPrimary
+            val active = OffipeColors.Mark
 
-        // Green flash overlay inside viewfinder when detected
-        if (detected) {
-            val flash = Path().apply { addRect(sq) }
-            drawPath(flash, color = OffipeColors.Success.copy(alpha = 0.18f))
-        }
-
-        // Lime L-corners with subtle idle pulse
-        val arm = 32.dp.toPx()
-        val thick = 4.dp.toPx()
-        val color = cornerColor.copy(alpha = if (detected) 1f else pulse)
-
-        // Top-left
-        drawLine(color, sq.topLeft, Offset(sq.left + arm, sq.top), strokeWidth = thick, cap = StrokeCap.Round)
-        drawLine(color, sq.topLeft, Offset(sq.left, sq.top + arm), strokeWidth = thick, cap = StrokeCap.Round)
-        // Top-right
-        drawLine(color, Offset(sq.right - arm, sq.top), sq.topRight, strokeWidth = thick, cap = StrokeCap.Round)
-        drawLine(color, sq.topRight, Offset(sq.right, sq.top + arm), strokeWidth = thick, cap = StrokeCap.Round)
-        // Bottom-left
-        drawLine(color, Offset(sq.left, sq.bottom - arm), sq.bottomLeft, strokeWidth = thick, cap = StrokeCap.Round)
-        drawLine(color, sq.bottomLeft, Offset(sq.left + arm, sq.bottom), strokeWidth = thick, cap = StrokeCap.Round)
-        // Bottom-right
-        drawLine(color, Offset(sq.right - arm, sq.bottom), sq.bottomRight, strokeWidth = thick, cap = StrokeCap.Round)
-        drawLine(color, sq.bottomRight, Offset(sq.right, sq.bottom - arm), strokeWidth = thick, cap = StrokeCap.Round)
-
-        // Animated scan line + glow trail (clipped to viewfinder)
-        if (!detected) {
-            val clip = Path().apply { addRect(sq) }
-            clipPath(clip) {
-                val y = sq.top + sq.height * sweep
-                // Glow trail
-                val glowHeight = 24.dp.toPx()
+            // Faint inner wash while searching; cleared on lock
+            if (lock < 1f) {
                 drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            OffipeColors.Accent.copy(alpha = 0.18f),
-                            OffipeColors.Accent.copy(alpha = 0.32f),
-                            Color.Transparent
-                        ),
-                        startY = y - glowHeight,
-                        endY = y + glowHeight
-                    ),
-                    topLeft = Offset(sq.left, y - glowHeight),
-                    size = androidx.compose.ui.geometry.Size(sq.width, glowHeight * 2)
+                    color = Color.White.copy(alpha = 0.03f * search * (1f - lock)),
+                    size = size
                 )
-                // Scan line
-                drawLine(
-                    color = OffipeColors.Accent,
-                    start = Offset(sq.left + 8f, y),
-                    end = Offset(sq.right - 8f, y),
-                    strokeWidth = 2f
+            }
+
+            // Soft corner illumination — two stacked discs, no neon
+            if (lock < 1f) {
+                val glowOuter = 18.dp.toPx()
+                val glowInner = 9.dp.toPx()
+                listOf(
+                    Offset(0f, 0f), Offset(s, 0f),
+                    Offset(0f, s), Offset(s, s)
+                ).forEach { c ->
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.045f * search * (1f - lock)),
+                        radius = glowOuter,
+                        center = c
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.075f * search * (1f - lock)),
+                        radius = glowInner,
+                        center = c
+                    )
+                }
+            }
+
+            // Corner brackets
+            val bracket = s * 0.22f
+            val wPx = 4.dp.toPx()
+            val baseAlpha = 0.5f + 0.5f * search
+            val lineColor = lerp(brackets, active, lock)
+                .copy(alpha = (baseAlpha * (1f - lock) + lock).coerceIn(0f, 1f))
+            listOf(
+                Triple(Offset(0f, 0f), Offset(bracket, 0f), Offset(0f, bracket)),
+                Triple(Offset(s, 0f), Offset(s - bracket, 0f), Offset(s, bracket)),
+                Triple(Offset(0f, s), Offset(bracket, s), Offset(0f, s - bracket)),
+                Triple(Offset(s, s), Offset(s - bracket, s), Offset(s, s - bracket))
+            ).forEach { (corner, hEnd, vEnd) ->
+                drawLine(lineColor, corner, hEnd, strokeWidth = wPx, cap = StrokeCap.Round)
+                drawLine(lineColor, corner, vEnd, strokeWidth = wPx, cap = StrokeCap.Round)
+            }
+
+            // Corner LED tips — the recognition indicators
+            val tip = 2.5.dp.toPx()
+            listOf(Offset(0f, 0f), Offset(s, 0f), Offset(0f, s), Offset(s, s)).forEach { c ->
+                drawCircle(
+                    color = lerp(brackets, active, lock)
+                        .copy(alpha = (0.45f * search + 0.55f * lock).coerceIn(0f, 1f)),
+                    radius = tip,
+                    center = c
                 )
             }
         }
@@ -501,8 +566,7 @@ private fun ViewfinderOverlay(detected: Boolean) {
 
 /**
  * Brief fade-to-black overlay shown the moment a QR is detected. Smooths
- * the hand-off from the camera screen to the Pay form so it doesn't feel
- * like a hard snap-cut. ~220ms 0 → 0.55 alpha while we navigate away.
+ * the hand-off from the camera screen to the QR result screen.
  */
 @Composable
 private fun DetectionFadeOverlay(visible: Boolean) {
@@ -519,23 +583,28 @@ private fun DetectionFadeOverlay(visible: Boolean) {
 }
 
 @Composable
-private fun PointAtQrCaption(detected: Boolean) {
-    val infinite = rememberInfiniteTransition(label = "caption")
-    val pulse by infinite.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "caption_pulse"
-    )
-    Text(
-        text = if (detected) "QR DETECTED" else "POINT AT QR",
-        style = OffipeType.LabelLarge,
-        color = if (detected) OffipeColors.Success else OffipeColors.TextPrimary,
-        modifier = Modifier.alpha(if (detected) 1f else pulse)
-    )
+private fun ScanCaption(detected: Boolean) {
+    // Static copy — the breathing work lives in the frame layer, so the
+    // caption no longer recomposes on every animation frame.
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = if (detected) "LOCK" else "Point at a UPI QR Code",
+            style = OffipeType.HeadlineLarge,
+            color = OffipeColors.TextPrimary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = if (detected) "Decoding payload…"
+            else "Supports UPI QR · Gallery import",
+            style = OffipeType.BodySmall,
+            color = OffipeColors.TextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
 }
 
 @Composable
@@ -546,11 +615,10 @@ private fun FocusRing(at: Offset, key: String, onDone: () -> Unit) {
         label = "focus_$key",
         finishedListener = { onDone() }
     )
-    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-        // 32 → 24 dp ring (inverse: smaller as progress advances)
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val radius = (32.dp.toPx()) * (1f - progress * 0.25f)
         drawCircle(
-            color = OffipeColors.Accent.copy(alpha = 1f - progress),
+            color = OffipeColors.Mark.copy(alpha = 1f - progress),
             radius = radius,
             center = at,
             style = Stroke(width = 2.dp.toPx())
@@ -558,138 +626,53 @@ private fun FocusRing(at: Offset, key: String, onDone: () -> Unit) {
     }
 }
 
-// ─── Misc UI helpers ───────────────────────────────────────────────────────────
+// ─── Bottom row key ───────────────────────────────────────────────────────────
 
 @Composable
-private fun BackChip(onClick: () -> Unit) {
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.92f else 1f, label = "back_scale")
-
-    Box(
-        Modifier
-            .size(36.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.6f))
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        onClick()
-                    })
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.ChevronLeft,
-                contentDescription = "Back",
-                tint = OffipeColors.TextPrimary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ZoomChip(zoom: Float, onClick: () -> Unit) {
-    val view = LocalView.current
-    Box(
-        Modifier
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.6f))
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    onClick()
-                })
-            }
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = "%.1f×".format(zoom),
-            style = OffipeType.LabelMedium,
-            color = OffipeColors.Accent
-        )
-    }
-}
-
-@Composable
-private fun GlassyCircleButton(
+private fun CircleAction(
     icon: ImageVector,
-    contentDescription: String,
-    diameter: Dp,
-    onClick: () -> Unit
+    label: String,
+    onClick: () -> Unit,
+    active: Boolean = false
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.92f else 1f, label = "glassy_scale")
-
-    Box(
-        Modifier
-            .size(diameter)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        val pressInteraction = androidx.compose.foundation.interaction.PressInteraction.Press(it)
-                        interactionSource.tryEmit(pressInteraction)
-                        tryAwaitRelease()
-                        interactionSource.tryEmit(
-                            androidx.compose.foundation.interaction.PressInteraction.Release(pressInteraction)
-                        )
-                    },
-                    onTap = {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        onClick()
-                    }
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        // Lime border
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                color = OffipeColors.BorderStrong,
-                style = Stroke(width = 1.dp.toPx()),
-                radius = size.minDimension / 2f
-            )
-        }
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = OffipeColors.TextPrimary,
-            modifier = Modifier.size(diameter * 0.4f)
-        )
+    val face = when {
+        active -> OffipeColors.Mark
+        isPressed -> OffipeColors.SurfaceHigher
+        else -> OffipeColors.SurfaceHigh
     }
-}
-
-@Composable
-private fun ZoomSlider(zoom: Float) {
-    val fraction = ((zoom - QrScannerManager.MIN_ZOOM) /
-        (QrScannerManager.MAX_ZOOM - QrScannerManager.MIN_ZOOM)).coerceIn(0f, 1f)
-    Box(
-        Modifier
-            .fillMaxWidth(0.6f)
-            .height(4.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.15f))
+    val tint = when {
+        active -> OffipeColors.Black
+        else -> OffipeColors.TextPrimary
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             Modifier
-                .fillMaxWidth(fraction)
-                .height(4.dp)
+                .size(58.dp)
                 .clip(CircleShape)
-                .background(OffipeColors.Accent)
+                .background(face)
+                .clickable(interactionSource = interactionSource, indication = null) {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    onClick()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            text = label,
+            style = OffipeType.BodySmall,
+            color = OffipeColors.TextSecondary
         )
     }
 }
-
-

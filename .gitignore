@@ -36,7 +36,6 @@ keystore.properties
 *.jks
 *.keystore
 
-# Node modules (reference projects)
-node_modules/
-.next/
-/References
+# JVM crash / replay dumps (never commit)
+hs_err_pid*.log
+replay_pid*.log
