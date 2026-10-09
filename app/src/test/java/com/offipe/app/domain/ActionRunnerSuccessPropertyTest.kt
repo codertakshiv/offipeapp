@@ -36,16 +36,9 @@ class ActionRunnerSuccessPropertyTest : FunSpec({
     // Generator for random context text (prefix/suffix around the pattern)
     val contextArb = Arb.string(0..30)
 
-    // Generator for reference IDs with 6+ digits
-    val refIdArb = arbitrary {
-        val digitCount = Arb.int(6..12).bind()
-        val digits = (1..digitCount).map { Arb.int(0..9).bind() }.joinToString("")
-        digits
-    }
-
     // Universal success pattern snippets
     val successPatternArb = arbitrary {
-        val patternIndex = Arb.int(0..4).bind()
+        val patternIndex = Arb.int(0..3).bind()
         when (patternIndex) {
             0 -> "is successful"
             1 -> {
@@ -54,11 +47,6 @@ class ActionRunnerSuccessPropertyTest : FunSpec({
             }
             2 -> "transaction successful"
             3 -> "payment successful"
-            4 -> {
-                val digitCount = Arb.int(6..12).bind()
-                val digits = (1..digitCount).map { Arb.int(0..9).bind() }.joinToString("")
-                "reference no: $digits"
-            }
             else -> "is successful"
         }
     }
@@ -100,10 +88,25 @@ class ActionRunnerSuccessPropertyTest : FunSpec({
         }
     }
 
-    test("matchesUniversalSuccess detects reference IDs with 6+ digits") {
-        checkAll(100, contextArb, refIdArb, contextArb) { prefix, digits, suffix ->
-            val text = "${prefix}reference no: $digits$suffix"
-            runner.matchesUniversalSuccess(text) shouldBe true
-        }
+    test("reference numbers alone do not indicate success") {
+        runner.matchesUniversalSuccess("reference no: 123456") shouldBe false
+        runner.matchesUniversalSuccess("ref: 987654321") shouldBe false
+    }
+
+    test("fillTemplate replaces placeholders in one pass") {
+        runner.fillTemplate(
+            "Note {note}; PIN {pin}",
+            mapOf("note" to "{pin}", "pin" to "123456")
+        ) shouldBe "Note {pin}; PIN 123456"
+    }
+
+    test("fillTemplate substitutes the mobile lookup variable") {
+        runner.fillTemplate("{mobile}", mapOf("mobile" to "9876543210")) shouldBe "9876543210"
+    }
+
+    test("LookupMobile can only send the mobile variable") {
+        val replies = Actions.LookupMobile.steps.mapNotNull { it.reply }
+        replies shouldBe listOf("{mobile}")
+        replies.any { "{amount}" in it || "{note}" in it || "{pin}" in it } shouldBe false
     }
 })

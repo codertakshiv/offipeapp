@@ -8,9 +8,12 @@ import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
 import android.view.HapticFeedbackConstants
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.activity.compose.BackHandler
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -102,27 +105,23 @@ fun OffipeApp() {
             prefsRepo = app.prefsRepo
         )
 
-        else -> MainScaffold(
-            app = app,
-            onReplayOnboarding = {
-                scope.launch { app.prefsRepo.setFirstLaunchComplete(false) }
-            }
-        )
+        else -> MainScaffold(app = app)
     }
 }
 
 @Composable
-private fun MainScaffold(app: OffipeApplication, onReplayOnboarding: () -> Unit) {
+private fun MainScaffold(app: OffipeApplication) {
     val navController = rememberNavController()
     val backstackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backstackEntry?.destination?.route ?: Screen.Home.route
     val view = LocalView.current
 
-    val permissions by rememberPermissionStatus()
+    val permissionsState = rememberPermissionStatus()
+    val permissions by permissionsState
     val userName by app.prefsRepo.userName.collectAsState(initial = "")
 
-    val payViewModel = rememberPayViewModel(app)
-    val balanceViewModel = rememberBalanceViewModel(app)
+    val payViewModel = payViewModel(app)
+    val balanceViewModel = balanceViewModel(app)
     val historyViewModel = rememberHistoryViewModel(app)
 
     val paySession by payViewModel.sessionState.collectAsState()
@@ -183,14 +182,10 @@ private fun MainScaffold(app: OffipeApplication, onReplayOnboarding: () -> Unit)
             navController = navController,
             startDestination = Screen.Home.route,
             modifier = Modifier.fillMaxSize(),
-            // Snappy, symmetric transitions. The stock NavHost default is a
-            // slow cross-fade that holds both screens on screen long enough
-            // to read as a hitch; a short matched fade keeps navigation
-            // feeling immediate without changing the visual language.
-            enterTransition = { fadeIn(tween(170)) },
-            exitTransition = { fadeOut(tween(130)) },
-            popEnterTransition = { fadeIn(tween(170)) },
-            popExitTransition = { fadeOut(tween(130)) }
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -211,7 +206,7 @@ private fun MainScaffold(app: OffipeApplication, onReplayOnboarding: () -> Unit)
                     onNavigateScan = { push(Screen.Scan.route) },
                     onNavigateHistory = { push(Screen.History.route) },
                     onNavigateFaq = { push(Screen.Faq.route) },
-                    permissions = permissions
+                    permissions = permissionsState
                 )
             }
             composable(Screen.Scan.route) {
@@ -275,17 +270,20 @@ private fun MainScaffold(app: OffipeApplication, onReplayOnboarding: () -> Unit)
                     historyViewModel = historyViewModel,
                     permissions = permissions,
                     versionName = "1.0.1",
-                    onClearAllData = { historyViewModel.clearHistory() },
+                    onClearAllData = {
+                        historyViewModel.clearAllData {
+                            app.prefsRepo.clearLastBalance()
+                            app.cacheDir.resolve("shared/Offipe.apk").delete()
+                        }
+                    },
                     onOpenFaq = { push(Screen.Faq.route) },
-                    onOpenHistory = { push(Screen.History.route) },
                     onOpenPrivacy = { push(Screen.Privacy.route) },
                     onOpenTerms = { push(Screen.Terms.route) }
                 )
             }
             composable(Screen.Faq.route) {
                 FaqScreen(
-                    onClose = { navController.popBackStack() },
-                    onReplayOnboarding = onReplayOnboarding
+                    onClose = { navController.popBackStack() }
                 )
             }
             composable(Screen.Legal.route) {
@@ -297,6 +295,18 @@ private fun MainScaffold(app: OffipeApplication, onReplayOnboarding: () -> Unit)
             }
             composable(Screen.Terms.route) {
                 LegalScreen(onClose = { navController.popBackStack() }, initialTab = 1)
+            }
+        }
+
+        if (currentRoute == Screen.Pay.route) {
+            BackHandler {
+                when (payViewModel.sessionState.value) {
+                    is SessionState.Running -> payViewModel.cancelSession()
+                    is SessionState.Success, is SessionState.Failed -> payViewModel.dismissSession()
+                    SessionState.Idle -> Unit
+                }
+                payViewModel.onNavigateAway()
+                navController.popBackStack()
             }
         }
 
@@ -356,43 +366,60 @@ private fun showSystemToast(context: Context, text: String) {
 }
 
 @Composable
-private fun rememberPayViewModel(app: OffipeApplication): PayViewModel {
-    val context = LocalContext.current
-    return remember {
-        PayViewModel(
-            actionRunner = app.actionRunner,
-            historyRepo = app.historyRepo,
-            prefsRepo = app.prefsRepo,
-            carrierDetector = app.carrierDetector,
-            overlayController = app.overlayController,
-            onDialerFallback = { code ->
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$code"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            },
-            clipboardWriter = { text -> writeToClipboard(context, text) },
-            systemToast = { text -> showSystemToast(context, text) }
-        )
+private fun payViewModel(app: OffipeApplication): PayViewModel {
+    val context = LocalContext.current.applicationContext
+    val factory = remember(app, context) {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                require(modelClass.isAssignableFrom(PayViewModel::class.java))
+                @Suppress("UNCHECKED_CAST")
+                return PayViewModel(
+                    actionRunner = app.actionRunner,
+                    historyRepo = app.historyRepo,
+                    prefsRepo = app.prefsRepo,
+                    carrierDetector = app.carrierDetector,
+                    overlayController = app.overlayController,
+                    onDialerFallback = { code ->
+                        val encodedCode = code.replace("#", Uri.encode("#"))
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$encodedCode"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    },
+                    clipboardWriter = { text -> writeToClipboard(context, text) },
+                    systemToast = { text -> showSystemToast(context, text) },
+                    stringFor = context::getString
+                ) as T
+            }
+        }
     }
+    return viewModel(factory = factory)
 }
 
 @Composable
-private fun rememberBalanceViewModel(app: OffipeApplication): BalanceViewModel {
-    val context = LocalContext.current
-    return remember {
-        BalanceViewModel(
-            actionRunner = app.actionRunner,
-            prefsRepo = app.prefsRepo,
-            overlayController = app.overlayController,
-            onDialerFallback = { code ->
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$code"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            },
-            clipboardWriter = { text -> writeToClipboard(context, text) },
-            systemToast = { text -> showSystemToast(context, text) }
-        )
+private fun balanceViewModel(app: OffipeApplication): BalanceViewModel {
+    val context = LocalContext.current.applicationContext
+    val factory = remember(app, context) {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                require(modelClass.isAssignableFrom(BalanceViewModel::class.java))
+                @Suppress("UNCHECKED_CAST")
+                return BalanceViewModel(
+                    actionRunner = app.actionRunner,
+                    prefsRepo = app.prefsRepo,
+                    overlayController = app.overlayController,
+                    onDialerFallback = { code ->
+                        val encodedCode = code.replace("#", Uri.encode("#"))
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$encodedCode"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    },
+                    clipboardWriter = { text -> writeToClipboard(context, text) },
+                    systemToast = { text -> showSystemToast(context, text) }
+                ) as T
+            }
+        }
     }
+    return viewModel(factory = factory)
 }
 
 @Composable

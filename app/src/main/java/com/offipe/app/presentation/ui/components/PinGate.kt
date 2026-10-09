@@ -1,6 +1,7 @@
 package com.offipe.app.presentation.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Text
@@ -51,7 +54,8 @@ fun PinGate(
     modifier: Modifier = Modifier,
     statement: String? = null,
     hint: String? = null,
-    error: String? = null
+    error: String? = null,
+    useBoxes: Boolean = false
 ) {
     Box(
         modifier
@@ -105,28 +109,31 @@ fun PinGate(
 
             Spacer(Modifier.height(28.dp))
 
-            // PIN readout — round dots, center aligned
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(pinLength) { i ->
-                    val filled = i < pin.length
-                    Box(
-                        Modifier
-                            .size(if (filled) 16.dp else 12.dp)
-                            .clip(CircleShape)
-                            .background(
-                                when {
-                                    filled -> OffipeColors.Mark
-                                    error != null -> OffipeColors.Danger
-                                    else -> OffipeColors.BorderStrong
-                                }
-                            )
-                    )
+            if (useBoxes) {
+                PinBoxes(pin = pin, pinLength = pinLength, error = error)
+            } else {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(pinLength) { i ->
+                        val filled = i < pin.length
+                        Box(
+                            Modifier
+                                .size(if (filled) 16.dp else 12.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        filled -> OffipeColors.Mark
+                                        error != null -> OffipeColors.Danger
+                                        else -> OffipeColors.BorderStrong
+                                    }
+                                )
+                        )
+                    }
                 }
             }
 
@@ -158,6 +165,52 @@ fun PinGate(
                 },
                 showDecimal = false
             )
+        }
+    }
+}
+
+@Composable
+fun PinBoxes(
+    pin: String,
+    pinLength: Int,
+    error: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(pinLength) { index ->
+            Box(
+                Modifier
+                    .weight(1f)
+                    .widthIn(max = 42.dp)
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(OffipeColors.Surface)
+                    .border(
+                        width = 1.dp,
+                        color = when {
+                            error != null -> OffipeColors.Danger
+                            index < pin.length -> OffipeColors.Mark
+                            else -> OffipeColors.BorderStrong
+                        },
+                        shape = RoundedCornerShape(6.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (index < pin.length) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(OffipeColors.Mark)
+                    )
+                }
+            }
         }
     }
 }

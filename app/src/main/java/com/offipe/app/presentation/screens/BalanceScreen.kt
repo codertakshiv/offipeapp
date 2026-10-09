@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -158,13 +157,6 @@ fun BalanceScreen(
                                 color = OffipeColors.TextSecondary,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconKey(
-                                icon = Icons.Default.Refresh,
-                                contentDescription = "Check balance",
-                                onClick = ::startCheck,
-                                size = 40.dp,
-                                tint = OffipeColors.TextPrimary
-                            )
                         }
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -203,11 +195,6 @@ fun BalanceScreen(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    CircleAction(
-                        icon = Icons.Default.Refresh,
-                        label = "Check Balance",
-                        onClick = ::startCheck
-                    )
                     CircleAction(
                         icon = Icons.AutoMirrored.Filled.ReceiptLong,
                         label = "History",

@@ -32,8 +32,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,11 +45,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.offipe.app.R
 import com.offipe.app.presentation.permissions.openAccessibilitySettings
 import com.offipe.app.presentation.ui.components.Chip
 import com.offipe.app.presentation.ui.components.GhostActionBar
@@ -64,31 +64,22 @@ import com.offipe.app.presentation.ui.components.TextKey
 import com.offipe.app.presentation.ui.theme.OffipeColors
 import com.offipe.app.presentation.ui.theme.OffipeType
 
-// ─── Hooks for the user to drop in real assets later ──────────────────────────
-
-private val TUTORIAL_VIDEO_URL: String? =
-    "https://youtube.com/playlist?list=PL6zhuU_l94t1y25MDt96Z-MltD3S6iPFj&si=GNlanTwR-IcfOBI"
-
-private const val GITHUB_REPO_URL = "https://github.com/laksh-ya/OffipeApp/"
-private const val RESTRICTED_SETTINGS_GUIDE_URL =
-    "https://cleanbrowsing.org/support/mobile/disable-restricted-settings-android"
+private const val GITHUB_REPO_URL = "https://github.com/codertakshiv/offipeapp/"
 
 /**
  * FAQ — the indexed manual.
  *
  * Numbered hairline accordion: five topic groups, each question a ruled
  * row that expands into body prose, mono-numbered steps and full-bleed
- * action bars. Header strip carries ESC plus the replay-intro key.
+ * action bars. The header contains only a close key and title.
  */
 @Composable
 fun FaqScreen(
     onClose: () -> Unit,
-    onReplayOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scroll = rememberScrollState()
     val context = LocalContext.current
-    val view = LocalView.current
 
     Column(
         modifier
@@ -114,14 +105,6 @@ fun FaqScreen(
                 Spacer(Modifier.width(12.dp))
                 Tag("FAQ · Help", color = OffipeColors.TextSecondary)
                 Spacer(Modifier.weight(1f))
-                TextKey(
-                    text = "Replay intro",
-                    color = OffipeColors.Mark,
-                    onClick = {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        onReplayOnboarding()
-                    }
-                )
             }
             Hairline()
         }
@@ -165,19 +148,6 @@ fun FaqScreen(
                             val i = Intent(
                                 Intent.ACTION_DIAL,
                                 Uri.parse("tel:*99${Uri.encode("#")}")
-                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            runCatching { context.startActivity(i) }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    GhostActionBar(
-                        text = "Official *99# Guide",
-                        icon = Icons.Default.PlayArrow,
-                        onClick = {
-                            val i = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://www.bhimupi.org.in/steps-to-use-99#")
                             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             runCatching { context.startActivity(i) }
                         },
@@ -239,12 +209,12 @@ fun FaqScreen(
                     NumberedStep(4, "Open Offipe → enable Accessibility")
                     Spacer(Modifier.height(14.dp))
                     GhostActionBar(
-                        text = "View Guide with Screenshots",
-                        icon = Icons.Default.PlayArrow,
+                        text = "Open Source Code & Guides",
+                        icon = Icons.Default.Code,
                         onClick = {
                             val i = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse(RESTRICTED_SETTINGS_GUIDE_URL)
+                                Uri.parse(GITHUB_REPO_URL)
                             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             runCatching { context.startActivity(i) }
                         },
@@ -355,23 +325,10 @@ fun FaqScreen(
 
             Spacer(Modifier.height(26.dp))
             Hairline()
-
-            val videoUrl = TUTORIAL_VIDEO_URL
-            if (videoUrl != null) {
-                GhostActionBar(
-                    text = "Watch Video Tutorial",
-                    icon = Icons.Default.PlayArrow,
-                    onClick = {
-                        val i = Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        runCatching { context.startActivity(i) }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Spacer(Modifier.height(18.dp))
 
             GhostActionBar(
-                text = "Source Code & Guides (GitHub)",
+                text = stringResource(R.string.github_source_guides),
                 icon = Icons.Default.Code,
                 onClick = {
                     val i = Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_REPO_URL))
@@ -380,25 +337,7 @@ fun FaqScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
-            Text(
-                text = "Additional video guides, releases & source code are available " +
-                    "on the GitHub repo.",
-                style = OffipeType.BodySmall,
-                color = OffipeColors.TextMuted,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-            )
-
-            GhostActionBar(
-                text = "Replay Onboarding",
-                icon = Icons.Default.Refresh,
-                onClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    onReplayOnboarding()
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(30.dp))
             CookieEasterEgg()
             Spacer(Modifier.height(40.dp))
         }

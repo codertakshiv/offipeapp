@@ -134,4 +134,20 @@ class InputValidatorPropertyTest : FunSpec({
             compositeResult.errors.keys shouldBe expectedErrorFields
         }
     }
+
+    test("optional notes allow up to 50 characters and reject braces") {
+        InputValidator.validateNote("").isValid shouldBe true
+        InputValidator.validateNote("n".repeat(50)).isValid shouldBe true
+        InputValidator.validateNote("n".repeat(51)).isValid shouldBe false
+        InputValidator.validateNote("pay {pin}").isValid shouldBe false
+        InputValidator.validateNote("pay } now").isValid shouldBe false
+
+        val form = InputValidator.validatePaymentForm(
+            vpa = "user@bank",
+            amount = "1",
+            pin = "1234",
+            note = "{pin}"
+        )
+        form.errors[FormField.NOTE] shouldBe InputValidator.validateNote("{pin}").errorMessage
+    }
 })

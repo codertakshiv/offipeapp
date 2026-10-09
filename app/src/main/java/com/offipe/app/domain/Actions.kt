@@ -164,4 +164,24 @@ object Actions {
         ),
         timeoutMs = 18_000L
     )
+
+    /** Look up the name associated with a mobile number, without PIN entry. */
+    val LookupMobile = Action(
+        code = "*99*1*1#",
+        steps = listOf(
+            ActionStep(
+                match = MobileLookupParser.MOBILE_PROMPT,
+                reply = "{mobile}",
+                delayMs = 0L
+            ),
+            ActionStep(
+                match = MobileLookupParser.LINKED,
+                done = true,
+                label = "Recipient found"
+            )
+        ),
+        failurePatterns = listOf(MobileLookupParser.NOT_LINKED),
+        timeoutMs = 20_000L,
+        cancelWithCancelButton = true
+    )
 }

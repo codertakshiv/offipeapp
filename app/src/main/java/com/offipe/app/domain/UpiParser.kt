@@ -8,7 +8,7 @@ import java.net.URLDecoder
  */
 object UpiParser {
 
-    private val VPA_REGEX = Regex("[a-zA-Z0-9.\\-_]{3,}@[a-zA-Z0-9.\\-_]{3,}")
+    private val VPA_REGEX = Regex("^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$")
 
     /**
      * Parses a `upi://pay?` URI string and extracts payment parameters.
@@ -17,10 +17,23 @@ object UpiParser {
      * @return UpiData if the URI is valid and contains a valid VPA, null otherwise.
      */
     fun parse(raw: String): UpiData? {
-        val trimmed = raw.trim()
-        if (!trimmed.lowercase().startsWith("upi://pay?")) return null
+        val trimmed = raw.trim().removePrefix("\uFEFF").trim()
+        if (isValidVpa(trimmed)) {
+            return UpiData(
+                vpa = trimmed,
+                payeeName = null,
+                amount = null,
+                transactionNote = null
+            )
+        }
 
-        val queryString = trimmed.substringAfter("?", "")
+        val queryIndex = trimmed.indexOf('?')
+        if (queryIndex < 0 ||
+            !trimmed.substring(0, queryIndex).removeSuffix("/")
+                .equals("upi://pay", ignoreCase = true)
+        ) return null
+
+        val queryString = trimmed.substring(queryIndex + 1).substringBefore('#')
         if (queryString.isEmpty()) return null
 
         val params = parseQueryParams(queryString)
@@ -54,11 +67,11 @@ object UpiParser {
     }
 
     private fun parseQueryParams(query: String): Map<String, String> {
-        return query.split("&")
+        return query.replace("&amp;", "&", ignoreCase = true).split("&")
             .mapNotNull { pair ->
                 val parts = pair.split("=", limit = 2)
                 if (parts.size == 2) {
-                    parts[0].lowercase() to parts[1]
+                    parts[0].removePrefix("amp;").lowercase() to parts[1]
                 } else {
                     null
                 }

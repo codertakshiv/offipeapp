@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,9 +43,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.offipe.app.R
 import com.offipe.app.data.PreferencesRepository
+import com.offipe.app.data.UserNameRules
 import com.offipe.app.domain.OperationMode
 import com.offipe.app.presentation.HistoryViewModel
 import com.offipe.app.presentation.permissions.PermissionStatus
@@ -52,9 +57,13 @@ import com.offipe.app.presentation.permissions.openAccessibilitySettings
 import com.offipe.app.presentation.permissions.openOverlaySettings
 import com.offipe.app.presentation.permissions.rememberPermissionLaunchers
 import com.offipe.app.presentation.ui.components.Chip
+import com.offipe.app.presentation.ui.components.GhostActionBar
 import com.offipe.app.presentation.ui.components.Hairline
+import com.offipe.app.presentation.ui.components.InlineField
 import com.offipe.app.presentation.ui.components.LedDot
 import com.offipe.app.presentation.ui.components.OffipeDialog
+import com.offipe.app.presentation.ui.components.OffipeDialogSurface
+import com.offipe.app.presentation.ui.components.PrimaryActionBar
 import com.offipe.app.presentation.ui.components.ReadoutRow
 import com.offipe.app.presentation.ui.components.Segmented
 import com.offipe.app.presentation.ui.components.Tag
@@ -72,8 +81,8 @@ import kotlinx.coroutines.launch
  *    control + live description); Permissions expands into the four
  *    permission rows with Grant keys, the sideload troubleshoot and an
  *    "All granted" green check when everything is on.
- *  - General: Transaction History, Help & FAQ, Privacy Policy,
- *    Terms of Use, Clear All Data (danger confirm), About.
+ *  - General: Help & FAQ, Privacy Policy, Terms of Use, Clear All Data
+ *    (danger confirm), About.
  *
  * Tapping the About row still summons the cat overlay easter egg.
  */
@@ -85,13 +94,13 @@ fun SettingsScreen(
     versionName: String,
     onClearAllData: () -> Unit,
     onOpenFaq: () -> Unit,
-    onOpenHistory: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenTerms: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val mode by prefsRepo.operationMode.collectAsState(initial = OperationMode.AUTO)
     val pinLength by prefsRepo.pinLength.collectAsState(initial = 6)
+    val userName by prefsRepo.userName.collectAsState(initial = "")
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val launchers = rememberPermissionLaunchers()
@@ -103,6 +112,8 @@ fun SettingsScreen(
     var pinOpen by remember { mutableStateOf(false) }
     var accessOpen by remember { mutableStateOf(!allGranted) }
     var confirmClear by remember { mutableStateOf(false) }
+    var editNameOpen by remember { mutableStateOf(false) }
+    var nameDraft by remember(userName) { mutableStateOf(userName) }
 
     Column(
         modifier
@@ -266,7 +277,26 @@ fun SettingsScreen(
         // ── General ──
         GroupLabel("General")
         Column(Modifier.padding(horizontal = 20.dp)) {
-            LinkRow("Transaction History", onOpenHistory)
+            ReadoutRow(
+                label = "Display Name",
+                value = "",
+                sublabel = userName.ifBlank { "Add a name for your greeting" },
+                leading = { RowIcon(Icons.Default.Person, tint = OffipeColors.TextMuted) },
+                onClick = {
+                    nameDraft = userName
+                    editNameOpen = true
+                },
+                trailing = {
+                    TextKey(
+                        text = "Change",
+                        onClick = {
+                            nameDraft = userName
+                            editNameOpen = true
+                        },
+                        color = OffipeColors.Mark
+                    )
+                }
+            )
             Hairline()
             LinkRow("Help & FAQ", onOpenFaq)
             Hairline()
@@ -278,7 +308,7 @@ fun SettingsScreen(
                 label = "Clear All Data",
                 value = "",
                 valueColor = OffipeColors.Danger,
-                sublabel = "Delete every stored transaction",
+                sublabel = "Delete transactions, balance and cached installer",
                 onClick = { confirmClear = true },
                 trailing = { Chip(text = "Clear", color = OffipeColors.Danger) }
             )
@@ -291,9 +321,9 @@ fun SettingsScreen(
 
     if (confirmClear) {
         OffipeDialog(
-            title = "Clear transaction history?",
-            message = "Every locally-stored payment record will be deleted. " +
-                "This cannot be undone.",
+            title = "Clear all local data?",
+            message = "Transactions, the saved balance and the cached installer " +
+                "will be deleted. This cannot be undone.",
             confirmLabel = "Clear",
             onConfirm = {
                 confirmClear = false
@@ -302,6 +332,51 @@ fun SettingsScreen(
             onDismiss = { confirmClear = false },
             danger = true
         )
+    }
+
+    if (editNameOpen) {
+        Dialog(onDismissRequest = { editNameOpen = false }) {
+            OffipeDialogSurface {
+                Column(Modifier.padding(horizontal = 22.dp, vertical = 22.dp)) {
+                    Text(
+                        text = "Change display name",
+                        style = OffipeType.TitleLarge,
+                        color = OffipeColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    InlineField(
+                        value = nameDraft,
+                        onValueChange = { value ->
+                            if (value.length <= UserNameRules.MAX_LENGTH) nameDraft = value
+                        },
+                        label = "Your name",
+                        placeholder = "Name",
+                        imeAction = ImeAction.Done,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(22.dp))
+                    Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                        GhostActionBar(
+                            text = "Cancel",
+                            onClick = { editNameOpen = false },
+                            modifier = Modifier.weight(1f),
+                            height = 48.dp
+                        )
+                        PrimaryActionBar(
+                            text = "Save",
+                            onClick = {
+                                scope.launch {
+                                    prefsRepo.setUserName(nameDraft)
+                                    editNameOpen = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            height = 48.dp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -441,29 +516,27 @@ private fun AccessibilityTroubleshoot() {
         StepRow(2, "Tap the ⋮ three dots (top right)")
         StepRow(3, "Select \"Allow restricted settings\" → confirm with PIN")
         StepRow(4, "Open Offipe → enable Accessibility service")
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(14.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextKey(
                 text = "Open settings",
                 onClick = { openAccessibilitySettings(context) },
                 color = OffipeColors.Mark
             )
-            Spacer(Modifier.width(10.dp))
-            TextKey(
-                text = "View guide",
-                onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "https://cleanbrowsing.org/support/mobile/" +
-                                "disable-restricted-settings-android"
-                        )
-                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    runCatching { context.startActivity(intent) }
-                },
-                color = OffipeColors.TextSecondary
-            )
         }
+        Spacer(Modifier.height(12.dp))
+        GhostActionBar(
+            text = stringResource(R.string.github_source_guides),
+            onClick = {
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://github.com/codertakshiv/offipeapp/")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                runCatching { context.startActivity(intent) }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            height = 46.dp
+        )
     }
 }
 
@@ -498,7 +571,7 @@ private fun AboutRow(versionName: String) {
     ReadoutRow(
         label = "About",
         value = "",
-        sublabel = "Offipe · V$versionName",
+        sublabel = stringResource(R.string.about_credit, versionName),
         leading = {
             Image(
                 painter = offipeLogoPainter(),

@@ -6,8 +6,13 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.int
 import io.kotest.property.checkAll
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withTimeout
 
 /**
  * Property-based tests for ActionRunner unmatched terminal frame failure behavior.
@@ -78,5 +83,81 @@ class ActionRunnerTerminalPropertyTest : FunSpec({
             checkBalanceMatch shouldBe -1
             matchesSuccess shouldBe false
         }
+    }
+
+    test("action failure patterns take priority over universal success") {
+        val frames = MutableSharedFlow<UssdFrame>(replay = 1)
+        var cancelCalls = 0
+        val cancelled = CompletableDeferred<Unit>()
+        val engine = object : UssdEnginePort {
+            override suspend fun dial(code: String) {}
+            override suspend fun sendReply(reply: String): Boolean = true
+            override suspend fun cancel() {
+                cancelCalls++
+                cancelled.complete(Unit)
+            }
+            override suspend fun dismissDialog(): Boolean = true
+            override fun getSessionId(): Int = 1
+            override fun isServiceEnabled(): Boolean = true
+            override val frames: SharedFlow<UssdFrame> = frames
+        }
+        val runner = ActionRunner(engine)
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val text = "Payment is successful but rejected by this carrier"
+        val run = runner.runAction(
+            action = Action(
+                code = "*99#",
+                steps = emptyList(),
+                failurePatterns = listOf(Regex("is successful", RegexOption.IGNORE_CASE))
+            ),
+            vars = emptyMap(),
+            scope = scope
+        )
+
+        frames.emit(UssdFrame(text, isMenu = false, isTerminal = true, sessionId = 1, frameId = 1))
+        val result = run.result.await()
+        withTimeout(1_000) { cancelled.await() }
+        scope.cancel()
+
+        result.success shouldBe false
+        result.resultText shouldBe text
+        cancelCalls shouldBe 1
+    }
+
+    test("a done step cancels the engine after reporting success") {
+        val frames = MutableSharedFlow<UssdFrame>(replay = 1)
+        var cancelCalls = 0
+        val cancelled = CompletableDeferred<Unit>()
+        val engine = object : UssdEnginePort {
+            override suspend fun dial(code: String) {}
+            override suspend fun sendReply(reply: String): Boolean = true
+            override suspend fun cancel() {
+                cancelCalls++
+                cancelled.complete(Unit)
+            }
+            override suspend fun dismissDialog(): Boolean = true
+            override fun getSessionId(): Int = 1
+            override fun isServiceEnabled(): Boolean = true
+            override val frames: SharedFlow<UssdFrame> = frames
+        }
+        val runner = ActionRunner(engine)
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val text = "Balance displayed"
+        val run = runner.runAction(
+            action = Action(
+                code = "*99*3#",
+                steps = listOf(ActionStep(match = Regex("Balance displayed"), done = true))
+            ),
+            vars = emptyMap(),
+            scope = scope
+        )
+
+        frames.emit(UssdFrame(text, isMenu = false, isTerminal = true, sessionId = 1, frameId = 1))
+        val result = run.result.await()
+        withTimeout(1_000) { cancelled.await() }
+        scope.cancel()
+
+        result.success shouldBe true
+        cancelCalls shouldBe 1
     }
 })

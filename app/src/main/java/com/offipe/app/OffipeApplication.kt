@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.offipe.app.data.AppDatabase
+import com.offipe.app.data.DbKeyProvider
 import com.offipe.app.data.HistoryRepository
 import com.offipe.app.data.PreferencesRepository
 import com.offipe.app.domain.ActionRunner
@@ -13,6 +14,8 @@ import com.offipe.app.platform.CarrierDetector
 import com.offipe.app.platform.OverlayControllerImpl
 import com.offipe.app.platform.QrScannerManager
 import com.offipe.app.platform.UssdEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 
 /**
  * Top-level DataStore delegate (must be at file level per DataStore docs).
@@ -60,10 +63,13 @@ class OffipeApplication : Application() {
         super.onCreate()
 
         // Data layer
-        val passphrase = "offipe_secure_db".toByteArray() // In production, derive from secure source
+        val passphrase = DbKeyProvider(this).getOrCreateKey()
         database = AppDatabase.create(this, passphrase)
         historyRepo = HistoryRepository(database.transactionDao())
-        prefsRepo = PreferencesRepository(dataStore)
+        prefsRepo = PreferencesRepository(dataStore, database.lastBalanceDao())
+        runBlocking(Dispatchers.IO) {
+            prefsRepo.migrateLegacyLastBalance()
+        }
 
         // Platform layer
         overlayController = OverlayControllerImpl(this)

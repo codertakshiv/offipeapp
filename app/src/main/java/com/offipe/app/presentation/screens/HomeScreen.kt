@@ -373,13 +373,13 @@ private fun CompactTxnRow(txn: TransactionEntity) {
 }
 
 private fun greeting(): String {
-    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-    return when (hour) {
-        in 5..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        in 17..21 -> "Good evening"
-        else -> "Good night"
-    }
+    return listOf(
+        "Good to see you",
+        "What's up",
+        "Nice to see you",
+        "Welcome back",
+        "Ready when you are"
+    ).random()
 }
 
 private fun formatWhen(ts: Long): String {

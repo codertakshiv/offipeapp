@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -600,6 +601,7 @@ fun InlineField(
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Done,
     onFocusChange: (Boolean) -> Unit = {},
+    onImeAction: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -646,6 +648,9 @@ fun InlineField(
                                 keyboardType = keyboardType,
                                 imeAction = imeAction
                             ),
+                            keyboardActions = onImeAction?.let { action ->
+                                KeyboardActions(onNext = { action() }, onDone = { action() })
+                            } ?: KeyboardActions.Default,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 20.dp)

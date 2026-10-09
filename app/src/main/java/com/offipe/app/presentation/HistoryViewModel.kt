@@ -28,4 +28,11 @@ class HistoryViewModel(
             historyRepo.clearHistory()
         }
     }
+
+    fun clearAllData(clearAdditionalData: suspend () -> Unit) {
+        viewModelScope.launch {
+            historyRepo.clearHistory()
+            clearAdditionalData()
+        }
+    }
 }

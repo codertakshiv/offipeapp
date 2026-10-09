@@ -33,10 +33,20 @@ class UpiParserPropertyTest : FunSpec({
         }
     }
 
+    val vpaHandleArb: Arb<String> = arbitrary {
+        val handleChars = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        val len = Arb.int(3..8).bind()
+        buildString {
+            repeat(len) {
+                append(handleChars[Arb.int(0 until handleChars.size).bind()])
+            }
+        }
+    }
+
     // Generator for valid VPAs: local@handle
     val vpaArb = arbitrary {
         val local = vpaPartArb(3, 10).bind()
-        val handle = vpaPartArb(3, 8).bind()
+        val handle = vpaHandleArb.bind()
         "$local@$handle"
     }
 
@@ -104,5 +114,23 @@ class UpiParserPropertyTest : FunSpec({
                 transactionNote = note
             )
         }
+    }
+
+    test("accepts bare and short VPAs supported by payment validation") {
+        UpiParser.parse("ab@ok") shouldBe UpiData(
+            vpa = "ab@ok",
+            payeeName = null,
+            amount = null,
+            transactionNote = null
+        )
+    }
+
+    test("parses case-insensitive UPI paths and HTML-escaped query separators") {
+        UpiParser.parse("UPI://PAY/?pa=ab%40ok&amp;am=25.00") shouldBe UpiData(
+            vpa = "ab@ok",
+            payeeName = null,
+            amount = "25.00",
+            transactionNote = null
+        )
     }
 })

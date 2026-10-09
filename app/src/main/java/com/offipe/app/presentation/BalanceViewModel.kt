@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.offipe.app.data.PreferencesRepository
 import com.offipe.app.domain.ActionEvent
+import com.offipe.app.domain.ActionRun
 import com.offipe.app.domain.ActionRunner
 import com.offipe.app.domain.Actions
 import com.offipe.app.domain.InputValidator
@@ -47,8 +48,8 @@ data class BalanceUiState(
  *     CTA at 4-5 digits.
  *  2. [attemptCheckBalance] validates the PIN and starts the CheckBalance
  *     action via [runCheck].
- *  3. On success the carrier reply is persisted to PreferencesRepository
- *     so the last result survives app kill.
+    *  3. On success the carrier reply is persisted in encrypted Room so
+    *     the last result survives app kill.
  *
  * @param clipboardWriter only used by MANUAL mode where the screen falls
  *   back to the dialer with *99*3# prefilled. Unused in ADVANCED/AUTO.
@@ -76,7 +77,7 @@ class BalanceViewModel(
     val snackbar: StateFlow<String?> = _snackbar.asStateFlow()
 
     /**
-     * Last persisted balance result. Hydrated from DataStore so the screen
+    * Last persisted balance result. Hydrated from encrypted Room so the screen
      * renders the prior balance immediately on launch.
      */
     val lastResult: StateFlow<BalanceResult?> = combine(
@@ -94,6 +95,7 @@ class BalanceViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, 6)
 
     private var sessionJob: Job? = null
+    private var activeRun: ActionRun? = null
 
     /** Inline PIN editing — strips non-digits, caps at configured length, clears any error. */
     fun onPinChanged(pin: String) {
@@ -110,6 +112,8 @@ class BalanceViewModel(
      *    CheckBalance action via [runCheck].
      */
     fun attemptCheckBalance() {
+        if (_sessionState.value is SessionState.Running) return
+
         val mode = operationMode.value
 
         if (mode == OperationMode.MANUAL) {
@@ -171,6 +175,7 @@ class BalanceViewModel(
 
         val vars = mapOf("pin" to pin)
         val actionRun = actionRunner.runAction(Actions.CheckBalance, vars, viewModelScope)
+        activeRun = actionRun
 
         sessionJob = viewModelScope.launch {
             launch {
@@ -247,11 +252,16 @@ class BalanceViewModel(
      * Cancels the current balance check session.
      */
     fun cancelSession() {
+        val run = activeRun
+        activeRun = null
         sessionJob?.cancel()
         sessionJob = null
-        overlayController?.hide()
-        _sessionState.value = SessionState.Idle
-        onSessionEnd()
+        viewModelScope.launch {
+            run?.cancel?.invoke()
+            overlayController?.hide()
+            _sessionState.value = SessionState.Idle
+            onSessionEnd()
+        }
     }
 
     fun dismissSession() {
@@ -265,6 +275,7 @@ class BalanceViewModel(
     }
 
     private fun onSessionEnd() {
+        activeRun = null
         _uiState.update { it.copy(isSessionActive = false) }
         viewModelScope.launch {
             delay(500)

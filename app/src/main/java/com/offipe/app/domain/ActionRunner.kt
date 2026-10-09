@@ -24,11 +24,11 @@ data class ActionRun(
  * Pure domain logic with no Android framework dependencies (testable in isolation).
  *
  * Termination rules (priority order, mirrors the proven `UssdAction.ts` runner):
- *   1. Frame matches one of [UNIVERSAL_SUCCESS_PATTERNS] → success, even if
+ *   1. Frame matches one of `action.failurePatterns` → fail with carrier text.
+ *   2. Frame matches one of [UNIVERSAL_SUCCESS_PATTERNS] → success, even if
  *      the dialog still has an input field. Some carriers append a
  *      "1. Save contact 2. Exit" menu after the success message; we don't
  *      want that follow-up.
- *   2. Frame matches one of `action.failurePatterns` → fail with carrier text.
  *   3. Frame matches the current `done` step → success.
  *   4. Frame matches a non-`done` step → send the step's reply.
  *   5. Frame is `isTerminal` and didn't match any of the above → fail with
@@ -56,10 +56,10 @@ class ActionRunner(private val engine: UssdEnginePort) {
             Regex("successfully\\s+(?:sent|paid|completed|debited|transferred)", RegexOption.IGNORE_CASE),
             Regex("transaction\\s+successful", RegexOption.IGNORE_CASE),
             Regex("txn\\s+successful", RegexOption.IGNORE_CASE),
-            Regex("payment\\s+successful", RegexOption.IGNORE_CASE),
-            // A real referenceId in the text is a strong success signal
-            Regex("ref(?:erence)?\\s*(?:id|no|number|#)?\\s*[:\\-]?\\s*\\d{6,}", RegexOption.IGNORE_CASE)
+            Regex("payment\\s+successful", RegexOption.IGNORE_CASE)
         )
+
+        private val TEMPLATE_PLACEHOLDER = Regex("\\{([^{}]+)\\}")
     }
 
     /**
@@ -97,7 +97,8 @@ class ActionRunner(private val engine: UssdEnginePort) {
 
             try {
                 // 1. Dismiss any leftover dialog and dial the action code.
-                engine.dismissDialog()
+                if (action.cancelWithCancelButton) engine.dismissLookupDialog()
+                else engine.dismissDialog()
                 engine.dial(action.code)
 
                 // 2. Capture our session ID. Frames with a different
@@ -111,24 +112,30 @@ class ActionRunner(private val engine: UssdEnginePort) {
 
                     val text = frame.text
 
-                    // ── Priority 1: universal success short-circuit ────────
-                    if (matchesUniversalSuccess(text)) {
+                    // ── Priority 1: action-specific failure patterns ───────
+                    if (matchesFailurePattern(text, action.failurePatterns)) {
                         terminated = true
-                        eventFlow.emit(ActionEvent.Done(text))
-                        resultDeferred.complete(ActionResult(success = true, resultText = text))
-                        engine.dismissDialog()
-                        engine.cancel()
+                        completeAction(
+                            action = action,
+                            eventFlow = eventFlow,
+                            resultDeferred = resultDeferred,
+                            event = ActionEvent.Error("Transaction failed", text),
+                            result = ActionResult(success = false, resultText = text)
+                        )
                         job?.cancel()
                         return@collect
                     }
 
-                    // ── Priority 2: action-specific failure patterns ───────
-                    if (matchesFailurePattern(text, action.failurePatterns)) {
+                    // ── Priority 2: universal success short-circuit ────────
+                    if (matchesUniversalSuccess(text)) {
                         terminated = true
-                        eventFlow.emit(ActionEvent.Error("Transaction failed", text))
-                        resultDeferred.complete(ActionResult(success = false, resultText = text))
-                        engine.dismissDialog()
-                        engine.cancel()
+                        completeAction(
+                            action = action,
+                            eventFlow = eventFlow,
+                            resultDeferred = resultDeferred,
+                            event = ActionEvent.Done(text),
+                            result = ActionResult(success = true, resultText = text)
+                        )
                         job?.cancel()
                         return@collect
                     }
@@ -145,9 +152,13 @@ class ActionRunner(private val engine: UssdEnginePort) {
 
                         if (step.done) {
                             terminated = true
-                            eventFlow.emit(ActionEvent.Done(text))
-                            resultDeferred.complete(ActionResult(success = true, resultText = text))
-                            engine.dismissDialog()
+                            completeAction(
+                                action = action,
+                                eventFlow = eventFlow,
+                                resultDeferred = resultDeferred,
+                                event = ActionEvent.Done(text),
+                                result = ActionResult(success = true, resultText = text)
+                            )
                             job?.cancel()
                             return@collect
                         }
@@ -160,8 +171,20 @@ class ActionRunner(private val engine: UssdEnginePort) {
                             if (!engine.isServiceEnabled()) {
                                 val errorMsg = "Accessibility service was killed — re-enable it in settings"
                                 terminated = true
-                                eventFlow.emit(ActionEvent.Error(errorMsg, text))
-                                resultDeferred.complete(ActionResult(success = false, resultText = errorMsg))
+                                if (action.cancelWithCancelButton) {
+                                    completeAction(
+                                        action = action,
+                                        eventFlow = eventFlow,
+                                        resultDeferred = resultDeferred,
+                                        event = ActionEvent.Error(errorMsg, ""),
+                                        result = ActionResult(success = false, resultText = "")
+                                    )
+                                } else {
+                                    eventFlow.emit(ActionEvent.Error(errorMsg, text))
+                                    resultDeferred.complete(
+                                        ActionResult(success = false, resultText = errorMsg)
+                                    )
+                                }
                                 job?.cancel()
                                 return@collect
                             }
@@ -171,7 +194,23 @@ class ActionRunner(private val engine: UssdEnginePort) {
                             // progression instead of a slot-machine autofill.
                             delay(step.delayMs)
 
-                            engine.sendReply(reply)
+                            val sent = if (action.cancelWithCancelButton) {
+                                engine.sendLookupReply(reply)
+                            } else {
+                                engine.sendReply(reply)
+                            }
+                            if (!sent && action.cancelWithCancelButton) {
+                                terminated = true
+                                completeAction(
+                                    action = action,
+                                    eventFlow = eventFlow,
+                                    resultDeferred = resultDeferred,
+                                    event = ActionEvent.Error("Mobile number could not be submitted", ""),
+                                    result = ActionResult(success = false, resultText = "")
+                                )
+                                job?.cancel()
+                                return@collect
+                            }
                             eventFlow.emit(ActionEvent.Reply(reply, matchedIndex))
                         }
                         return@collect
@@ -180,10 +219,13 @@ class ActionRunner(private val engine: UssdEnginePort) {
                     // ── Priority 4: terminal frame with no match ───────────
                     if (frame.isTerminal) {
                         terminated = true
-                        eventFlow.emit(ActionEvent.Error("Unexpected carrier response", text))
-                        resultDeferred.complete(ActionResult(success = false, resultText = text))
-                        engine.dismissDialog()
-                        engine.cancel()
+                        completeAction(
+                            action = action,
+                            eventFlow = eventFlow,
+                            resultDeferred = resultDeferred,
+                            event = ActionEvent.Error("Unexpected carrier response", text),
+                            result = ActionResult(success = false, resultText = text)
+                        )
                         job?.cancel()
                         return@collect
                     }
@@ -235,11 +277,9 @@ class ActionRunner(private val engine: UssdEnginePort) {
      * Replaces `{key}` placeholders in [template] with values from [vars].
      */
     fun fillTemplate(template: String, vars: Map<String, String>): String {
-        var result = template
-        for ((key, value) in vars) {
-            result = result.replace("{$key}", value)
+        return TEMPLATE_PLACEHOLDER.replace(template) { match ->
+            vars[match.groupValues[1]] ?: match.value
         }
-        return result
     }
 
     fun matchesUniversalSuccess(text: String): Boolean =
@@ -247,4 +287,24 @@ class ActionRunner(private val engine: UssdEnginePort) {
 
     fun matchesFailurePattern(text: String, patterns: List<Regex>): Boolean =
         patterns.any { it.containsMatchIn(text) }
+
+    private suspend fun completeAction(
+        action: Action,
+        eventFlow: MutableSharedFlow<ActionEvent>,
+        resultDeferred: CompletableDeferred<ActionResult>,
+        event: ActionEvent,
+        result: ActionResult
+    ) {
+        if (action.cancelWithCancelButton) {
+            engine.dismissLookupDialog()
+            engine.cancel()
+            eventFlow.emit(event)
+            resultDeferred.complete(result)
+        } else {
+            eventFlow.emit(event)
+            resultDeferred.complete(result)
+            engine.dismissDialog()
+            engine.cancel()
+        }
+    }
 }

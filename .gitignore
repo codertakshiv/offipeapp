@@ -39,3 +39,10 @@ keystore.properties
 # JVM crash / replay dumps (never commit)
 hs_err_pid*.log
 replay_pid*.log
+
+# Android build outputs
+app/build/
+app/release/
+
+# Local session notes
+session-*.md

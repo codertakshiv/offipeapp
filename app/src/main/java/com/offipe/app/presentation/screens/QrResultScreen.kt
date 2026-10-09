@@ -28,7 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.offipe.app.R
 import com.offipe.app.domain.UpiParser
 import com.offipe.app.presentation.PayViewModel
 import com.offipe.app.presentation.ui.components.GhostActionBar
@@ -88,6 +90,24 @@ fun QrResultScreen(
             Box(Modifier.size(42.dp))
         }
 
+        if (raw == null) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.qr_reading),
+                    style = OffipeType.TitleLarge,
+                    color = OffipeColors.TextPrimary
+                )
+            }
+            return@Column
+        }
+
         if (upiData == null) {
             NotUpiState(onScanAgain = onScanAgain)
             return@Column
@@ -143,13 +163,23 @@ fun QrResultScreen(
                         .padding(vertical = 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Tag("Amount")
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = upiData.amount?.let { "₹$it" } ?: "—",
-                        style = OffipeType.AmountLg,
-                        color = OffipeColors.TextPrimary
-                    )
+                    if (upiData.amount != null) {
+                        Tag("Amount")
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "₹${upiData.amount}",
+                            style = OffipeType.AmountLg,
+                            color = OffipeColors.TextPrimary
+                        )
+                    } else {
+                        Tag("No amount requested")
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "You can enter the amount before paying.",
+                            style = OffipeType.BodyMedium,
+                            color = OffipeColors.TextSecondary
+                        )
+                    }
                     if (!upiData.transactionNote.isNullOrBlank()) {
                         Spacer(Modifier.height(14.dp))
                         Tag("Note")

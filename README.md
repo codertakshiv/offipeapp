@@ -1,197 +1,155 @@
 <div align="center">
-
-<img src="artifacts/icon.png" alt="Offipe" width="120" height="120" />
-
-# Offipe
-
-### UPI payments. Without the internet.
-
-Send money. Check your balance. Scan QR codes.<br/>
-All over plain `*99#` USSD on your SIM. No data, no Wi-Fi, no account.
-
-[![Platform](https://img.shields.io/badge/platform-Android-000000?logo=android&logoColor=white)](https://www.android.com/)
-[![Min SDK](https://img.shields.io/badge/min%20SDK-26-blue)]()
-[![Kotlin](https://img.shields.io/badge/Kotlin-100%25-7F52FF?logo=kotlin&logoColor=white)]()
-[![License](https://img.shields.io/badge/license-MIT-success)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
-
-**[GitHub](https://github.com/codertakshiv/offipe)** · **[Download APK](https://github.com/codertakshiv/offipe/releases)**
-
-<br/>
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="docs/screenshots/pay-form.jpeg" alt="Pay screen" width="240" /><br/>
-      <sub><b>Type. Tap. Done.</b></sub>
-    </td>
-    <td align="center">
-      <img src="docs/screenshots/payment-success-alt.jpeg" alt="Payment complete" width="240" /><br/>
-      <sub><b>Real bank confirmation. Fully offline.</b></sub>
-    </td>
-  </tr>
-</table>
-
+  <img src="docs/assets/branding/offipe.svg" alt="Offipe logo" width="112" />
+  <h1>Offipe</h1>
+  <p>Offline UPI payments through India's <code>*99#</code> USSD service.</p>
 </div>
-
----
-
-## Why Offipe
-
-Every other UPI app needs the internet. In huge parts of India, that's a luxury.
-
-`*99#` is a USSD-based UPI service that works over your SIM's voice channel (no data needed). The catch: dialling raw codes and typing UPI IDs on a number pad is brutal. **Offipe puts a clean app on top of it.** Same modern feel as GPay or PhonePe: type, scan, tap. Zero bytes of data used.
-
-> **Built by [Takshiv Kashyap](https://github.com/codertakshiv).** Side project, not a registered payment service. Your PIN, your data, your transactions: they never leave the device.
-
----
-
-## What you get
-
-🌐 **Fully offline** &nbsp;·&nbsp; no Wi-Fi, no mobile data: just a SIM with voice signal.<br/>
-💸 **Send money** &nbsp;·&nbsp; UPI ID, amount, optional note, your PIN. ₹1 to ₹5,000 per transaction.<br/>
-📷 **Scan or import QR** &nbsp;·&nbsp; live camera with pinch-to-zoom, or pick any QR image from gallery.<br/>
-🏦 **Check balance** &nbsp;·&nbsp; one tap, straight from the bank.<br/>
-🧾 **Encrypted history** &nbsp;·&nbsp; last 200 successful payments, on-device, encrypted.<br/>
-🚫 **Zero tracking** &nbsp;·&nbsp; no analytics, no ads, no servers, no account, zero outbound requests.<br/>
-🛡️ **PIN never persists** &nbsp;·&nbsp; held in memory only, wiped within 500 ms of every session.<br/>
-✨ **Polish** &nbsp;·&nbsp; custom success/failure animations, haptics on every tap.
-
----
-
-## How it looks
-
-<div align="center">
-
-| Pay | Success | Failed |
-|:--:|:--:|:--:|
-| <img src="docs/screenshots/pay-form.jpeg" width="220" /> | <img src="docs/screenshots/payment-success.jpeg" width="220" /> | <img src="docs/screenshots/payment-failed.jpeg" width="220" /> |
-| Inline PIN, auto-fires on final digit | Animated check, real ref id | Carrier's exact error, never silent |
-
-| Balance | History |
-|:--:|:--:|
-| <img src="docs/screenshots/balance-result.jpeg" width="220" /> | <img src="docs/screenshots/history-detail.jpeg" width="220" /> |
-| Live from the bank, cached for later | Carrier reply + ref id + "Pay again" |
-
-</div>
-
----
-
-## Two modes, one toggle
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🟢 Auto &nbsp;<sub><i>(default)</i></sub>
-
-Branded Offipe screen covers the carrier dialog start to finish. You only ever see Offipe.
-
-<sub>Needs accessibility + display-over-other-apps.</sub>
-
-</td>
-<td width="50%" valign="top">
-
-### ⚪ Manual
-
-Offipe copies the UPI ID, opens the system dialer with `*99*1*3#` prefilled. You drive the rest.
-
-<sub>Works on any Android. No extra permissions.</sub>
-
-</td>
-</tr>
-</table>
 
 <p align="center">
-  <img src="docs/screenshots/settings.jpeg" alt="Settings: mode and permissions" width="240" />
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2ea44f" /></a>
+  <a href="https://github.com/codertakshiv/offipeapp"><img alt="Android platform" src="https://img.shields.io/badge/platform-Android-3ddc84?logo=android&logoColor=white" /></a>
+  <img alt="Kotlin 2.1.21" src="https://img.shields.io/badge/Kotlin-2.1.21-7F52FF?logo=kotlin&logoColor=white" />
+  <img alt="Minimum Android SDK 26" src="https://img.shields.io/badge/min%20SDK-26-blue" />
 </p>
 
----
+<p align="center">
+  <a href="https://github.com/codertakshiv/offipeapp">Repository</a> ·
+  <a href="https://github.com/codertakshiv/offipeapp/releases">Releases</a>
+</p>
 
-## PIN length: your choice
+## 📡 What is Offipe?
 
-Choose **4 digits** or **6 digits** in Settings → PIN Length. Defaults to 6. Works in both Auto and Manual modes.
+Offipe is an unofficial Android client for UPI payments over the carrier's `*99#` USSD service. It automates the menu-driven interaction that would otherwise require dialing codes and entering each response by hand. A cellular connection to the carrier is still required; mobile data is not part of the USSD payment flow.
 
----
+Offipe is not a bank, payment processor, or replacement for the carrier service. The bank and carrier process each transaction through their existing USSD systems.
 
-## Carrier reality check
+## 🔄 How it works
 
-| Carrier         | Status                                       |
-|-----------------|----------------------------------------------|
-| Airtel          |  works                                     |
-| Vi (Vodafone Idea) |  works                                  |
-| BSNL            |  works                                     |
-| Jio             |  network doesn't support `*99#`. App refuses to dial. |
+1. The user opens Pay, enters a UPI ID (or scans a UPI QR code), an amount, an optional note, and a UPI PIN.
+2. In Auto mode, Offipe starts the appropriate `*99#` session and its accessibility service reads the carrier dialog.
+3. The action runner matches each prompt and submits the corresponding response. The user confirms the transaction in the flow.
+4. The result is shown in Offipe. Successful UPI payments are recorded in local history.
 
-Bank not linked to `*99#`? Built-in onboarding guide walks you through enabling it once in BHIM.
+In Manual mode, Offipe copies the UPI ID and opens the system dialer with the payment code. The user completes the carrier prompts themselves.
 
----
+```mermaid
+flowchart TD
+    A[Pay screen] --> B[PayViewModel validates input]
+    B --> C[ActionRunner follows the scripted flow]
+    C --> D[UssdEngine starts the cellular USSD session]
+    D --> E[Carrier dialog]
+    E --> F[Accessibility service reads a frame]
+    F --> C
+    C --> G[Result and local transaction history]
+```
 
-## Privacy, in three lines
+## 🖼️ Screenshots
 
-- Your **UPI PIN** lives only in process memory, wiped within 500 ms of every session ending.
-- Your **transaction history** is in an encrypted SQLite database (SQLCipher) on your device. Uninstall = gone.
-- The app makes **zero outbound network requests** after install. Verify with a network monitor.
+| Home | Pay | Scan QR | Balance | Settings |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/assets/screenshots/home.png" alt="Offipe home screen with payment, scan, balance, history, and recent activity" width="150" /> | <img src="docs/assets/screenshots/pay.png" alt="Pay screen with UPI ID form, amount keypad, note, and UPI or mobile mode toggle" width="150" /> | <img src="docs/assets/screenshots/scan-qr.png" alt="QR scanner screen with scan frame, torch, and gallery controls" width="150" /> | <img src="docs/assets/screenshots/balance.png" alt="Balance screen with saved balance, balance actions, and recent activity" width="150" /> | <img src="docs/assets/screenshots/settings.png" alt="Settings screen with payment mode, PIN length, permissions, history, and data controls" width="150" /> |
 
-Full Privacy Policy and Terms of Use are inside the app at **Settings → Legal**.
+## Features
 
----
+- Send a payment to a UPI ID using the `*99#` USSD flow. Amounts are limited to ₹1–₹5,000 with up to two decimal places.
+- Scan a UPI QR code with the camera or decode one from a gallery image. QR data is parsed on-device.
+- Check and locally retain the latest balance response.
+- Browse recent successful payments, up to 200 records, and prefill a previous UPI payment.
+- Choose Auto or Manual in Settings. Auto uses the accessibility service and overlay; Manual opens the dialer and leaves the carrier prompts to the user. An Advanced mode path remains in code but is not offered by the Settings selector.
+- Complete onboarding, choose a display name, configure PIN length, and review permission guidance.
+- Look up the name associated with a mobile number. Mobile lookup is currently name lookup only; payment to a mobile number is not implemented.
 
-## Setup & Installation Guide
+## Project details
 
-Setting up Offipe takes less than two minutes. Follow these steps to get started:
+- App version: `1.0.1` (version code `2`)
+- Android SDK: minimum `26`, target `34`, compile `35`
+- Language and toolchain: Kotlin `2.1.21`, Java `17`
+- UI and navigation: Jetpack Compose Material 3, Navigation Compose `2.8.5`
+- Camera and QR: CameraX `1.4.1`, ML Kit Barcode Scanning `17.3.0`
+- Local data: Room `2.7.1`, SQLCipher `4.5.4`, DataStore Preferences `1.1.1`
+- Async: Kotlin Coroutines `1.9.0`
 
-### Step 1: One-Time UPI Setup (Link your Bank Account)
-Offipe automates the USSD channel. Your SIM card must be registered for `*99#` services with your bank first. If you have never used offline UPI before, perform this one-time link:
-1. Open your phone's dialer application and dial `*99#`.
-2. Enter your bank's name when prompted (e.g., SBI, HDFC, ICICI, PNB) or the first 4 letters of your bank branch's IFSC code.
-3. Follow the on-screen menu prompts to link your bank account.
-4. Set a UPI PIN (if you do not already have one set up for GPay, PhonePe, or BHIM).
-*Once linked, you never need to repeat this step.*
+## Permissions explained
 
-### Step 2: Install the Android Application
-1. Download the latest `Offipe.apk` from the [Releases](../../releases) tab.
-2. Open the downloaded file on your Android device.
-3. If prompted, allow your browser or file manager to "install apps from unknown sources".
-4. Follow the installation prompts to finish installing the app.
+The manifest declares:
 
-### Step 3: Setup Permissions & Android 13+ Workaround
-Upon first launch, Offipe will request permissions to run in **Auto mode** (which hides the raw carrier USSD dialogs and replaces them with a polished UI):
-- **Phone (CALL_PHONE)**: Required to dial the USSD codes.
-- **Accessibility Service**: Enables the app to read and fill out the carrier's text fields automatically.
-- **Display over other apps (Overlay)**: Required to show the polished user interface over the system USSD dialog.
+- `CALL_PHONE`: starts the `*99#` call session.
+- `CAMERA`: provides the live QR scanner. Gallery image decoding uses the selected image URI.
+- `READ_PHONE_STATE`: included in the phone-permission bundle and available to SIM/carrier inspection code. The current payment flow does not call `CarrierDetector` to reject a carrier.
+- `SYSTEM_ALERT_WINDOW`: allows the Auto-mode overlay to appear over the carrier dialog.
+- Accessibility service binding: Android binds the declared service so it can inspect and respond to the carrier dialog after the user enables it in system settings.
 
-#### ⚠️ How to bypass "Restricted settings" warning on Android 13+
-Because Offipe is sideloaded (not downloaded directly from Google Play Store), Android 13 and newer blocks Accessibility services for security by default. If you see the "Restricted setting" pop-up:
-1. Go to your device **Settings** → **Apps** → **Offipe**.
-2. Tap the **three vertical dots (⋮)** icon in the top-right corner.
-3. Tap **Allow restricted settings** and confirm using your fingerprint/PIN.
-4. Return to Offipe and enable the Accessibility service. It will now activate successfully.
+There is no `INTERNET` permission in the app manifest. GitHub help links open an external browser when selected; those links are not used by the payment flow.
 
-*Note: If you do not want to grant Accessibility or Overlay permissions, you can skip them and run Offipe in **Manual mode**. The app will simply copy the recipient's VPA and dial the code for you, letting you respond to the carrier prompts manually.*
+## 📦 Install
 
----
+Download an APK from [GitHub Releases](https://github.com/codertakshiv/offipeapp/releases), install it, and grant the permissions needed for the mode you intend to use. A phone with a cellular voice SIM and `*99#` service is required for live payments.
 
-## Design
+For a source build, use JDK 17 and an Android SDK that includes API 35:
 
-Offipe's look is a premium monochrome aesthetic: deep black backgrounds, layered charcoal surfaces, high-contrast white text, warm white accent. Clean typography, geometric depth, subtle borders. Inspired by modern fintech design—sharp, technical, trustworthy.
+```bash
+# Linux, macOS, or Codespaces
+./gradlew assembleDebug
+```
 
----
+```bat
+:: Windows
+.\gradlew.bat assembleDebug
+```
 
-## Coming soon
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. When sideloading on Android 13 or later, Android may block the accessibility service as a restricted setting. Open Settings → Apps → Offipe → the three-dot menu → Allow restricted settings, then enable Offipe under Accessibility.
 
-- More languages (Hindi, Tamil, Telugu, Bengali, Marathi to start)
-- Real video walkthroughs in onboarding
-- Per-bank quirk handling for the long tail of `*99#` flavours
+## 🔐 Privacy and security
 
----
+- Transaction records and the saved balance are stored in the app-private Room database protected by SQLCipher. On first run, Offipe generates a random 32-byte database key and wraps it using AES-256-GCM with an Android Keystore key; the encrypted key and IV are kept in private SharedPreferences.
+- DataStore holds preferences such as operation mode, PIN length, onboarding state, and display name. These preferences are not stored in the SQLCipher database.
+- The PIN is held as a Kotlin `String` in ViewModel state, masked in the UI, and removed from that state shortly after a session ends. This is not guaranteed memory zeroization: immutable JVM strings may remain in memory until reclaimed.
+- Mobile number lookup state is held in the active UI/session only and is not added to transaction history.
+- Android backup is disabled and extraction rules exclude app data from cloud backup and device transfer.
+- The app has no declared internet permission or app API client. USSD traffic still uses the carrier network and is subject to that network's security properties.
 
-## Contribute
+## ⚠️ Known limitations
 
-PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started, [ARCHITECTURE.md](ARCHITECTURE.md) if you want to dig into the internals.
+- The supported banks and carriers depend on the carrier's and bank's `*99#` menus. `CarrierDetector` exists, but the payment flow currently does not invoke its unsupported-carrier check; do not rely on it to detect or block Jio.
+- Payment amount validation is limited to ₹1–₹5,000 and two decimal places.
+- Mobile number support currently stops after fetching and showing a recipient name. It cannot pay to a mobile number.
+- A live USSD call needs a compatible cellular SIM and carrier service. An emulator can run the app and tests, but cannot verify a real `*99#` carrier session; this repository's live carrier flows have not been verified here.
+- PIN state uses immutable `String` values, so clearing ViewModel state is not the same as securely erasing every copy from process memory.
 
----
+## Project structure
+
+```text
+app/
+├── src/main/java/com/offipe/app/
+│   ├── data/          Room, SQLCipher, DataStore, repositories
+│   ├── domain/        Actions, validation, parsers, session models
+│   ├── platform/      USSD, accessibility, overlays, camera/QR
+│   └── presentation/  Compose screens, ViewModels, navigation
+├── src/main/res/      Android manifest resources and UI strings
+├── src/test/          JVM and property-based tests
+└── src/androidTest/   Instrumented Android tests
+docs/
+└── assets/
+    ├── branding/      Logo artwork
+    └── screenshots/   App screenshots
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and testing guidance. [ARCHITECTURE.md](ARCHITECTURE.md) describes the current code organization and USSD flow.
 
 ## License
 
-[MIT](LICENSE) · Built with care by Takshiv Kashyap.
+Offipe is distributed under the [MIT License](LICENSE).
+
+## 📝 Short terms and conditions
+
+- Use Offipe only with an account and SIM you are authorized to use. Check the recipient and amount before confirming; USSD payments may be irreversible.
+- Your bank and carrier process transactions and control service availability, limits, and any fees. Offipe is provided on a best-effort basis and cannot guarantee every session will succeed.
+- Keep your UPI PIN private and your device secure. USSD and accessibility behavior can vary by carrier and Android device.
+- Offipe is not a registered payment service and is not affiliated with NPCI, any bank, carrier, or payment provider. Use it at your own risk.
+
+This is a brief summary, not a replacement for the full Terms of Use in the app under Settings → Terms of Use.
+
+## Disclaimer
+
+Offipe is an independent project and is not affiliated with or endorsed by NPCI, any bank, telecom carrier, or payment service provider. USSD menus and network availability are controlled by those providers. Review each carrier prompt carefully and use Offipe at your own risk.

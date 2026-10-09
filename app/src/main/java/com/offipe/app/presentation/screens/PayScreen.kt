@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,11 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.offipe.app.R
 import com.offipe.app.domain.FormField
+import com.offipe.app.domain.MobileLookupParser
 import com.offipe.app.domain.OperationMode
 import com.offipe.app.domain.SessionState
+import com.offipe.app.presentation.MobileLookupState
 import com.offipe.app.presentation.PayUiState
+import com.offipe.app.presentation.PayMode
 import com.offipe.app.presentation.PayViewModel
 import com.offipe.app.presentation.permissions.PermissionStatus
 import com.offipe.app.presentation.permissions.openAccessibilitySettings
@@ -46,8 +53,11 @@ import com.offipe.app.presentation.ui.components.AlertTone
 import com.offipe.app.presentation.ui.components.IconKey
 import com.offipe.app.presentation.ui.components.InlineField
 import com.offipe.app.presentation.ui.components.NumericPad
+import com.offipe.app.presentation.ui.components.OffipeDialog
+import com.offipe.app.presentation.ui.components.PanelCard
 import com.offipe.app.presentation.ui.components.PinGate
 import com.offipe.app.presentation.ui.components.PrimaryActionBar
+import com.offipe.app.presentation.ui.components.Segmented
 import com.offipe.app.presentation.ui.components.SnackbarStrip
 import com.offipe.app.presentation.ui.components.Tag
 import com.offipe.app.presentation.ui.theme.OffipeColors
@@ -85,7 +95,7 @@ fun PayScreen(
     onNavigateScan: () -> Unit,
     onNavigateHistory: () -> Unit,
     onNavigateFaq: () -> Unit,
-    permissions: PermissionStatus,
+    permissions: State<PermissionStatus>,
     modifier: Modifier = Modifier
 ) {
     val ui by viewModel.uiState.collectAsState()
@@ -93,6 +103,17 @@ fun PayScreen(
     val mode by viewModel.operationMode.collectAsState()
     val snackbar by viewModel.snackbar.collectAsState()
     val pinLength by viewModel.pinLength.collectAsState(initial = 6)
+    val permissionStatus = permissions.value
+    var showLookupResultDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(ui.lookupState) {
+        showLookupResultDialog = when (ui.lookupState) {
+            MobileLookupState.Idle, MobileLookupState.Looking -> false
+            is MobileLookupState.Linked,
+            MobileLookupState.NotLinked,
+            is MobileLookupState.Failed -> true
+        }
+    }
 
     // The PIN gate opens only on submit — never while typing the form.
     var gateOpen by remember { mutableStateOf(false) }
@@ -104,8 +125,8 @@ fun PayScreen(
     }
 
     // Auto-fire when PIN digits entered and gate is open (debounced 250ms).
-    LaunchedEffect(ui.pin, gateOpen) {
-        if (gateOpen && ui.pin.length == pinLength) {
+    LaunchedEffect(ui.pin, gateOpen, pinLength, session) {
+        if (gateOpen && session is SessionState.Idle && ui.pin.length == pinLength) {
             delay(250)
             viewModel.attemptPayment()
         }
@@ -119,11 +140,14 @@ fun PayScreen(
         PayForm(
             ui = ui,
             mode = mode,
-            permissions = permissions,
+            permissions = permissionStatus,
             onPay = { viewModel.attemptPayment() },
             onScan = onNavigateScan,
             onHistory = onNavigateHistory,
             onHelp = onNavigateFaq,
+            onPayModeChanged = viewModel::onModeChanged,
+            onMobileChanged = viewModel::onMobileChanged,
+            onFetchName = viewModel::fetchRecipientName,
             onVpa = { v -> viewModel.onFormFieldChanged(vpa = v) },
             onAmount = { v -> viewModel.onFormFieldChanged(amount = v) },
             onNote = { v -> viewModel.onFormFieldChanged(note = v) },
@@ -133,6 +157,48 @@ fun PayScreen(
             },
             pinLength = pinLength
         )
+
+        if (showLookupResultDialog) {
+            when (val lookup = ui.lookupState) {
+                is MobileLookupState.Linked -> OffipeDialog(
+                    title = stringResource(
+                        R.string.mobile_lookup_linked_title,
+                        MobileLookupParser.titleCaseName(lookup.name)
+                    ),
+                    message = stringResource(R.string.mobile_lookup_linked_message),
+                    confirmLabel = stringResource(R.string.mobile_lookup_ok),
+                    onConfirm = { showLookupResultDialog = false },
+                    dismissLabel = stringResource(R.string.mobile_lookup_change_number),
+                    onDismiss = {
+                        showLookupResultDialog = false
+                        viewModel.onMobileChanged("")
+                    }
+                )
+                MobileLookupState.NotLinked -> OffipeDialog(
+                    title = stringResource(R.string.mobile_lookup_not_linked_title),
+                    message = stringResource(R.string.mobile_lookup_not_linked_message),
+                    confirmLabel = stringResource(R.string.mobile_lookup_use_upi_id),
+                    onConfirm = {
+                        showLookupResultDialog = false
+                        viewModel.onModeChanged(PayMode.UPI_ID)
+                    },
+                    dismissLabel = stringResource(R.string.mobile_lookup_cancel),
+                    onDismiss = { showLookupResultDialog = false }
+                )
+                is MobileLookupState.Failed -> OffipeDialog(
+                    title = stringResource(R.string.mobile_lookup_failed_title),
+                    message = lookup.message,
+                    confirmLabel = stringResource(R.string.mobile_lookup_retry),
+                    onConfirm = {
+                        showLookupResultDialog = false
+                        viewModel.fetchRecipientName()
+                    },
+                    dismissLabel = stringResource(R.string.mobile_lookup_cancel),
+                    onDismiss = { showLookupResultDialog = false }
+                )
+                MobileLookupState.Idle, MobileLookupState.Looking -> Unit
+            }
+        }
 
         if (gateOpen && mode != OperationMode.MANUAL) {
             PinGate(
@@ -151,6 +217,7 @@ fun PayScreen(
                     gateOpen = false
                     viewModel.onPinChanged("")
                 },
+                useBoxes = true,
                 error = ui.errors[FormField.PIN]
             )
         }
@@ -176,6 +243,9 @@ private fun PayForm(
     onScan: () -> Unit,
     onHistory: () -> Unit,
     onHelp: () -> Unit,
+    onPayModeChanged: (PayMode) -> Unit,
+    onMobileChanged: (String) -> Unit,
+    onFetchName: () -> Unit,
     onVpa: (String) -> Unit,
     onAmount: (String) -> Unit,
     onNote: (String) -> Unit,
@@ -184,6 +254,7 @@ private fun PayForm(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val launchers = rememberPermissionLaunchers()
     val scrollState = rememberScrollState()
 
@@ -273,100 +344,167 @@ private fun PayForm(
                 Spacer(Modifier.height(4.dp))
             }
 
-            // ── Destination ──
-            InlineField(
-                value = ui.vpa,
-                onValueChange = onVpa,
-                label = "Recipient UPI ID",
-                placeholder = "name@bank",
-                error = ui.errors[FormField.VPA],
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
-                imeAction = androidx.compose.ui.text.input.ImeAction.Next,
-                onFocusChange = { lineFieldFocused = it },
-                modifier = Modifier.fillMaxWidth(),
-                trailing = {
-                    IconKey(
-                        icon = Icons.Default.QrCodeScanner,
-                        contentDescription = "Scan QR code",
-                        onClick = onScan,
-                        size = 38.dp,
-                        tint = OffipeColors.TextSecondary
-                    )
-                }
+            Segmented(
+                options = listOf(
+                    stringResource(R.string.pay_mode_upi_id),
+                    stringResource(R.string.pay_mode_mobile_number)
+                ),
+                selectedIndex = if (ui.payMode == PayMode.UPI_ID) 0 else 1,
+                onSelect = { index ->
+                    focusManager.clearFocus()
+                    lineFieldFocused = false
+                    onPayModeChanged(if (index == 0) PayMode.UPI_ID else PayMode.MOBILE)
+                },
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(16.dp))
 
-            Spacer(Modifier.height(18.dp))
+            if (ui.payMode == PayMode.UPI_ID) {
+                // ── Destination ──
+                InlineField(
+                    value = ui.vpa,
+                    onValueChange = onVpa,
+                    label = "Recipient UPI ID",
+                    placeholder = "name@bank",
+                    error = ui.errors[FormField.VPA],
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+                    onFocusChange = { lineFieldFocused = it },
+                    onImeAction = { focusManager.clearFocus() },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailing = {
+                        IconKey(
+                            icon = Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR code",
+                            onClick = onScan,
+                            size = 38.dp,
+                            tint = OffipeColors.TextSecondary
+                        )
+                    }
+                )
 
-            // ── Amount readout ──
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "₹",
-                    style = OffipeType.AmountHero.copy(
-                        color = OffipeColors.TextSecondary
+                Spacer(Modifier.height(18.dp))
+
+                // ── Amount readout ──
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "₹",
+                        style = OffipeType.AmountHero.copy(
+                            color = OffipeColors.TextSecondary
+                        )
                     )
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = ui.amount.ifBlank { "0" },
-                    style = OffipeType.AmountHero.copy(
-                        color = if (ui.amount.isBlank()) OffipeColors.TextMuted
-                        else OffipeColors.TextPrimary
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-                if (ui.amount.isNotEmpty()) {
-                    IconKey(
-                        icon = Icons.Filled.Close,
-                        contentDescription = "Clear amount",
-                        onClick = { onAmount("") },
-                        size = 36.dp,
-                        tint = OffipeColors.TextMuted
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = ui.amount.ifBlank { "0" },
+                        style = OffipeType.AmountHero.copy(
+                            color = if (ui.amount.isBlank()) OffipeColors.TextMuted
+                            else OffipeColors.TextPrimary
+                        ),
+                        modifier = Modifier.weight(1f)
                     )
-                }
-            }
-            if (ui.errors[FormField.AMOUNT] != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = ui.errors[FormField.AMOUNT] ?: "",
-                    style = OffipeType.BodySmall,
-                    color = OffipeColors.Danger
-                )
-            } else {
-                Spacer(Modifier.height(4.dp))
-                Tag("Range ₹1 — ₹5,000")
-            }
-
-            Spacer(Modifier.height(18.dp))
-
-            // ── Note ──
-            InlineField(
-                value = ui.note,
-                onValueChange = onNote,
-                label = "Note (optional)",
-                placeholder = "For coffee",
-                onFocusChange = { lineFieldFocused = it },
-                modifier = Modifier.fillMaxWidth(),
-                trailing = {
-                    if (ui.note.isNotEmpty()) {
+                    if (ui.amount.isNotEmpty()) {
                         IconKey(
                             icon = Icons.Filled.Close,
-                            contentDescription = "Clear note",
-                            onClick = { onNote("") },
-                            size = 38.dp,
+                            contentDescription = "Clear amount",
+                            onClick = { onAmount("") },
+                            size = 36.dp,
                             tint = OffipeColors.TextMuted
                         )
                     }
                 }
-            )
+                if (ui.errors[FormField.AMOUNT] != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = ui.errors[FormField.AMOUNT] ?: "",
+                        style = OffipeType.BodySmall,
+                        color = OffipeColors.Danger
+                    )
+                } else {
+                    Spacer(Modifier.height(4.dp))
+                    Tag("Range ₹1 — ₹5,000")
+                }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(18.dp))
+
+                // ── Note ──
+                InlineField(
+                    value = ui.note,
+                    onValueChange = onNote,
+                    label = "Note (optional)",
+                    placeholder = "For coffee",
+                    error = ui.errors[FormField.NOTE],
+                    onFocusChange = { lineFieldFocused = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailing = {
+                        if (ui.note.isNotEmpty()) {
+                            IconKey(
+                                icon = Icons.Filled.Close,
+                                contentDescription = "Clear note",
+                                onClick = { onNote("") },
+                                size = 38.dp,
+                                tint = OffipeColors.TextMuted
+                            )
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(16.dp))
+            } else {
+                InlineField(
+                    value = ui.mobile,
+                    onValueChange = onMobileChanged,
+                    label = stringResource(R.string.mobile_number_label),
+                    placeholder = stringResource(R.string.mobile_number_placeholder),
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                    onFocusChange = { lineFieldFocused = it },
+                    onImeAction = { focusManager.clearFocus() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+                if (mode == OperationMode.MANUAL || !permissions.accessibility) {
+                    AlertStrip(
+                        title = stringResource(R.string.mobile_lookup_needs_auto_title),
+                        message = stringResource(R.string.mobile_lookup_needs_auto),
+                        tone = AlertTone.Info,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+                if (MobileLookupParser.isValidMobile(ui.mobile)) {
+                    PrimaryActionBar(
+                        text = stringResource(R.string.mobile_fetch_name),
+                        onClick = onFetchName,
+                        enabled = mode != OperationMode.MANUAL &&
+                            permissions.phoneBundle && permissions.accessibility &&
+                            ui.lookupState !is MobileLookupState.Looking,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (ui.lookupState is MobileLookupState.Linked) {
+                    Spacer(Modifier.height(12.dp))
+                    PanelCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(14.dp)) {
+                            Tag(stringResource(R.string.mobile_lookup_recipient))
+                            Spacer(Modifier.height(5.dp))
+                            Text(
+                                text = MobileLookupParser.titleCaseName(ui.lookupState.name),
+                                style = OffipeType.TitleMedium,
+                                color = OffipeColors.TextPrimary
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // ── Numeric pad — the amount machine ──
-        if (!lineFieldFocused) {
+        if (ui.payMode == PayMode.UPI_ID && !lineFieldFocused) {
             NumericPad(
                 onDigit = { d ->
                     val candidate = ui.amount + d
@@ -385,13 +523,15 @@ private fun PayForm(
         // ── Docked pill ──
         Box(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
             PrimaryActionBar(
-                text = when {
+                text = if (ui.payMode == PayMode.MOBILE) {
+                    stringResource(R.string.mobile_pay_coming_soon)
+                } else when {
                     mode == OperationMode.MANUAL -> "Open Dialer"
                     ui.amount.isNotBlank() -> "Pay ₹${ui.amount}"
                     else -> "Next"
                 },
-                onClick = onBarClick,
-                enabled = permissions.readyForDialerPay,
+                onClick = if (ui.payMode == PayMode.MOBILE) ({}) else onBarClick,
+                enabled = ui.payMode == PayMode.UPI_ID && permissions.readyForDialerPay,
                 modifier = Modifier.fillMaxWidth()
             )
         }

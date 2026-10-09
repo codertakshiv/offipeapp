@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.offipe.app.domain.OperationMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 object PreferencesKeys {
@@ -40,7 +42,10 @@ object UserNameRules {
     }
 }
 
-class PreferencesRepository(private val dataStore: DataStore<Preferences>) {
+class PreferencesRepository(
+    private val dataStore: DataStore<Preferences>,
+    private val lastBalanceDao: LastBalanceDao? = null
+) {
 
     val operationMode: Flow<OperationMode> = dataStore.data.map { preferences ->
         val stored = preferences[PreferencesKeys.OPERATION_MODE]
@@ -97,23 +102,33 @@ class PreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     /** Last successful balance check — full carrier reply text. */
-    val lastBalanceText: Flow<String?> = dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.LAST_BALANCE_TEXT]
-    }
+    val lastBalanceText: Flow<String?> = lastBalanceDao?.observe()?.map { it?.text }
+        ?: flowOf(null)
 
     /** Epoch millis of the last successful balance check. */
-    val lastBalanceTimestamp: Flow<Long?> = dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.LAST_BALANCE_TIMESTAMP]
-    }
+    val lastBalanceTimestamp: Flow<Long?> = lastBalanceDao?.observe()?.map { it?.timestamp }
+        ?: flowOf(null)
 
     suspend fun setLastBalance(text: String, timestamp: Long) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LAST_BALANCE_TEXT] = text
-            preferences[PreferencesKeys.LAST_BALANCE_TIMESTAMP] = timestamp
-        }
+        lastBalanceDao?.save(LastBalanceEntity(text = text, timestamp = timestamp))
     }
 
     suspend fun clearLastBalance() {
+        lastBalanceDao?.clear()
+        dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.LAST_BALANCE_TEXT)
+            preferences.remove(PreferencesKeys.LAST_BALANCE_TIMESTAMP)
+        }
+    }
+
+    suspend fun migrateLegacyLastBalance() {
+        val dao = lastBalanceDao ?: return
+        val legacyPreferences = dataStore.data.first()
+        val text = legacyPreferences[PreferencesKeys.LAST_BALANCE_TEXT]
+        val timestamp = legacyPreferences[PreferencesKeys.LAST_BALANCE_TIMESTAMP]
+        if (text != null && timestamp != null && dao.observe().first() == null) {
+            dao.save(LastBalanceEntity(text = text, timestamp = timestamp))
+        }
         dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.LAST_BALANCE_TEXT)
             preferences.remove(PreferencesKeys.LAST_BALANCE_TIMESTAMP)

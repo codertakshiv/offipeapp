@@ -2,6 +2,7 @@ package com.offipe.app.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.offipe.app.R
 import com.offipe.app.data.HistoryRepository
 import com.offipe.app.data.PreferencesRepository
 import com.offipe.app.domain.ActionEvent
@@ -10,6 +11,8 @@ import com.offipe.app.domain.ActionRunner
 import com.offipe.app.domain.Actions
 import com.offipe.app.domain.FormField
 import com.offipe.app.domain.InputValidator
+import com.offipe.app.domain.MobileLookupParser
+import com.offipe.app.domain.MobileLookupResult
 import com.offipe.app.domain.OperationMode
 import com.offipe.app.domain.SessionState
 import com.offipe.app.domain.UpiData
@@ -31,14 +34,27 @@ import kotlinx.coroutines.launch
  * itself in a highlighted "ENTER UPI PIN" section — no dedicated screen.
  */
 data class PayUiState(
+    val payMode: PayMode = PayMode.UPI_ID,
     val vpa: String = "",
+    val mobile: String = "",
     val payeeName: String = "",
     val amount: String = "",
     val note: String = "",
     val pin: String = "",
+    val lookupState: MobileLookupState = MobileLookupState.Idle,
     val errors: Map<FormField, String> = emptyMap(),
     val isSessionActive: Boolean = false
 )
+
+enum class PayMode { UPI_ID, MOBILE }
+
+sealed interface MobileLookupState {
+    data object Idle : MobileLookupState
+    data object Looking : MobileLookupState
+    data class Linked(val name: String) : MobileLookupState
+    data object NotLinked : MobileLookupState
+    data class Failed(val message: String) : MobileLookupState
+}
 
 /**
  * ViewModel for the Pay screen. Manages form state, QR autofill,
@@ -73,7 +89,8 @@ class PayViewModel(
      * is on the carrier dialog. Wired in MainScaffold via the activity
      * context.
      */
-    private val systemToast: (String) -> Unit = {}
+    private val systemToast: (String) -> Unit = {},
+    private val stringFor: (Int) -> String = { "" }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PayUiState())
@@ -95,6 +112,120 @@ class PayViewModel(
 
     private var activeRun: ActionRun? = null
     private var sessionJob: Job? = null
+
+    fun onModeChanged(mode: PayMode) {
+        _uiState.update { current ->
+            if (current.payMode == mode) current
+            else current.copy(
+                payMode = mode,
+                mobile = "",
+                pin = "",
+                lookupState = MobileLookupState.Idle
+            )
+        }
+    }
+
+    fun onMobileChanged(raw: String) {
+        val mobile = MobileLookupParser.normalizeMobile(raw).filter(Char::isDigit)
+        if (_uiState.value.lookupState is MobileLookupState.Looking) cancelSession()
+        _uiState.update { current ->
+            current.copy(mobile = mobile, lookupState = MobileLookupState.Idle)
+        }
+    }
+
+    fun fetchRecipientName() {
+        if (_sessionState.value is SessionState.Running) return
+        val state = _uiState.value
+        val mobile = MobileLookupParser.normalizeMobile(state.mobile)
+        if (state.payMode != PayMode.MOBILE || !MobileLookupParser.isValidMobile(mobile)) return
+
+        if (operationMode.value == OperationMode.MANUAL || !actionRunner.isServiceEnabled()) {
+            _snackbar.value = stringFor(R.string.mobile_lookup_needs_auto)
+            return
+        }
+
+        _uiState.update {
+            it.copy(mobile = mobile, lookupState = MobileLookupState.Looking, isSessionActive = true)
+        }
+        val checkingText = stringFor(R.string.mobile_lookup_checking)
+        _sessionState.value = SessionState.Running(
+            label = checkingText,
+            stepIndex = 0,
+            total = Actions.LookupMobile.steps.size
+        )
+        when (operationMode.value) {
+            OperationMode.AUTO -> overlayController?.show(
+                title = checkingText,
+                subtitle = "",
+                stepLabel = stringFor(R.string.mobile_lookup_step_label)
+            )
+            OperationMode.ADVANCED -> overlayController?.showMinimal(
+                progress = 0,
+                total = Actions.LookupMobile.steps.size,
+                label = stringFor(R.string.mobile_lookup_step_label)
+            )
+            OperationMode.MANUAL -> Unit
+        }
+        overlayController?.onCancel = { cancelSession() }
+
+        val run = actionRunner.runAction(
+            action = Actions.LookupMobile,
+            vars = mapOf("mobile" to mobile),
+            scope = viewModelScope
+        )
+        activeRun = run
+        sessionJob = viewModelScope.launch {
+            launch {
+                run.events.collect { event ->
+                    when (event) {
+                        is ActionEvent.Progress -> {
+                            _sessionState.value = SessionState.Running(
+                                label = checkingText,
+                                stepIndex = event.stepIndex,
+                                total = Actions.LookupMobile.steps.size
+                            )
+                            when (operationMode.value) {
+                                OperationMode.AUTO -> overlayController?.update(
+                                    title = checkingText,
+                                    subtitle = "",
+                                    stepLabel = stringFor(R.string.mobile_lookup_step_label)
+                                )
+                                OperationMode.ADVANCED -> overlayController?.updateMinimal(
+                                    progress = event.stepIndex,
+                                    total = Actions.LookupMobile.steps.size,
+                                    label = stringFor(R.string.mobile_lookup_step_label)
+                                )
+                                OperationMode.MANUAL -> Unit
+                            }
+                        }
+                        is ActionEvent.Done -> completeMobileLookup(event.resultText)
+                        is ActionEvent.Error -> completeMobileLookup(event.resultText)
+                        else -> Unit
+                    }
+                }
+            }
+
+            val result = run.result.await()
+            if (_uiState.value.lookupState is MobileLookupState.Looking) {
+                completeMobileLookup(result.resultText)
+            }
+        }
+    }
+
+    private fun completeMobileLookup(frameText: String) {
+        if (_uiState.value.lookupState !is MobileLookupState.Looking) return
+        val result = when (val parsed = MobileLookupParser.classify(frameText)) {
+            is MobileLookupResult.Linked -> MobileLookupState.Linked(parsed.name)
+            MobileLookupResult.NotLinked -> MobileLookupState.NotLinked
+            MobileLookupResult.Failed -> MobileLookupState.Failed(
+                stringFor(R.string.mobile_lookup_failed_message)
+            )
+        }
+        _uiState.update { it.copy(lookupState = result, isSessionActive = false) }
+        activeRun = null
+        overlayController?.hide()
+        _sessionState.value = SessionState.Idle
+    }
 
     /**
      * Re-prefills the form from a past transaction (used by "Pay again"
@@ -147,6 +278,7 @@ class PayViewModel(
             val newErrors = current.errors.toMutableMap()
             if (vpa != null) newErrors.remove(FormField.VPA)
             if (amount != null) newErrors.remove(FormField.AMOUNT)
+            if (note != null) newErrors.remove(FormField.NOTE)
             current.copy(
                 vpa = vpa ?: current.vpa,
                 amount = amount ?: current.amount,
@@ -179,6 +311,8 @@ class PayViewModel(
      * Manual taps of the Pay button at 4-5 digits also reach here.
      */
     fun attemptPayment() {
+        if (_sessionState.value is SessionState.Running) return
+
         val state = _uiState.value
         val mode = operationMode.value
 
@@ -199,6 +333,9 @@ class PayViewModel(
         }
         InputValidator.validateAmount(state.amount).also {
             if (!it.isValid) errors[FormField.AMOUNT] = it.errorMessage!!
+        }
+        InputValidator.validateNote(state.note).also {
+            if (!it.isValid) errors[FormField.NOTE] = it.errorMessage!!
         }
 
         // PIN is required only for automated modes; manual mode lets the
@@ -369,6 +506,24 @@ class PayViewModel(
 
     /** Cancel the active session. */
     fun cancelSession() {
+        if (_uiState.value.lookupState is MobileLookupState.Looking) {
+            val run = activeRun
+            activeRun = null
+            _uiState.update {
+                it.copy(
+                    lookupState = MobileLookupState.Failed(
+                        stringFor(R.string.mobile_lookup_failed_message)
+                    ),
+                    isSessionActive = false
+                )
+            }
+            viewModelScope.launch {
+                run?.cancel?.invoke()
+                overlayController?.hide()
+                _sessionState.value = SessionState.Idle
+            }
+            return
+        }
         viewModelScope.launch {
             activeRun?.cancel?.invoke()
             overlayController?.hide()
@@ -403,8 +558,7 @@ class PayViewModel(
     }
 
     fun onNavigateAway() {
-        // Defensive: if the user backs out mid-form, drop the in-memory PIN.
-        _uiState.update { it.copy(pin = "") }
+        _uiState.value = PayUiState()
     }
 
     fun onBackground() {

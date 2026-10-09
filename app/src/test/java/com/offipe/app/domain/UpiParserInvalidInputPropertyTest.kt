@@ -16,7 +16,7 @@ import io.kotest.property.forAll
  */
 class UpiParserInvalidInputPropertyTest : FunSpec({
 
-    val vpaPattern = Regex("[a-zA-Z0-9.\\-_]{3,}@[a-zA-Z0-9.\\-_]{3,}")
+    val vpaPattern = Regex("[a-zA-Z0-9._-]+@[a-zA-Z0-9]+")
 
     // Characters that cannot form a VPA pattern (non-alphanumeric, not '.', '-', '_', '@')
     val safeChars = charArrayOf(
@@ -34,26 +34,22 @@ class UpiParserInvalidInputPropertyTest : FunSpec({
                 val len = random.nextInt(0, 50)
                 (0 until len).map { safeChars[random.nextInt(safeChars.size)] }.joinToString("")
             }
-            // Strategy 2: Short alphanumeric before @ (< 3 chars left side, can't form VPA)
+            // Strategy 2: Empty right side, which cannot form a VPA.
             1 -> {
-                val prefixLen = random.nextInt(0, 3)
+                val prefixLen = random.nextInt(0, 9)
                 val prefix = (0 until prefixLen).map { ('a' + random.nextInt(26)) }.joinToString("")
-                val suffixLen = random.nextInt(0, 3)
-                val suffix = (0 until suffixLen).map { ('a' + random.nextInt(26)) }.joinToString("")
-                "${prefix}@${suffix}"
+                "${prefix}@"
             }
             // Strategy 3: Alphanumeric without @ symbol (no VPA without @)
             2 -> {
                 val len = random.nextInt(0, 30)
                 (0 until len).map { ('a' + random.nextInt(26)) }.joinToString("")
             }
-            // Strategy 4: Long left side but short right side of @ (< 3 right chars)
+            // Strategy 4: Long left side but empty right side of @.
             3 -> {
                 val prefixLen = random.nextInt(3, 15)
                 val prefix = (0 until prefixLen).map { ('a' + random.nextInt(26)) }.joinToString("")
-                val suffixLen = random.nextInt(0, 3)
-                val suffix = (0 until suffixLen).map { ('a' + random.nextInt(26)) }.joinToString("")
-                "${prefix}@${suffix}"
+                "${prefix}@"
             }
             // Strategy 5: Empty and whitespace
             else -> {

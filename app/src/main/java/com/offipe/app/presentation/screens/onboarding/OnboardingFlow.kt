@@ -97,11 +97,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 
-/**
- * Tutorial video URL. Rendered as a key link on the welcome page.
- */
-private val TUTORIAL_VIDEO_URL: String? =
-    "https://youtube.com/playlist?list=PL6zhuU_l94t1y25MDt96Z-MltD3S6iPFj&si=GNlanTwR-IcfOBI"
+private const val GITHUB_REPO_URL = "https://github.com/codertakshiv/offipeapp/"
 
 /**
  * ONBOARDING — six steps in the reference's hero voice.
@@ -945,8 +941,6 @@ private fun HeroArt(art: Art, modifier: Modifier = Modifier) {
 
 @Composable
 private fun PayOfflinePage() {
-    val context = LocalContext.current
-
     HeroScaffold {
         HeroHeadline(listOf("Pay", "Offline."))
         Spacer(Modifier.height(16.dp))
@@ -954,20 +948,6 @@ private fun PayOfflinePage() {
         Spacer(Modifier.height(22.dp))
         HeroArt(Art.Phone)
 
-        TUTORIAL_VIDEO_URL?.let { url ->
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextKey(
-                    text = "Watch tutorial",
-                    color = OffipeColors.TextSecondary,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        runCatching { context.startActivity(intent) }
-                    }
-                )
-            }
-        }
     }
 }
 
@@ -1393,10 +1373,7 @@ private fun RestrictedSettingsFix() {
                     onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse(
-                                "https://cleanbrowsing.org/support/mobile/" +
-                                    "disable-restricted-settings-android"
-                            )
+                            Uri.parse(GITHUB_REPO_URL)
                         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(intent) }
                     }

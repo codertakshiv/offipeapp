@@ -42,6 +42,8 @@ class UssdEngine(
 
     /** Timestamp (elapsedRealtime) of the last dial() call for double-tap protection. */
     private var lastDialTime: Long = 0L
+    private var lookupSessionActive: Boolean = false
+    private var lookupDialogDismissed: Boolean = false
 
     // ─── Coroutine Infrastructure ──────────────────────────────────────────────
 
@@ -65,6 +67,8 @@ class UssdEngine(
         const val SLOW_WATCH_TIMEOUT_MS = 12_000L
         const val HARD_TIMEOUT_SEND_MS = 25_000L
         const val HARD_TIMEOUT_OTHER_MS = 30_000L
+        const val HARD_TIMEOUT_LOOKUP_MS = 20_000L
+        private const val MOBILE_LOOKUP_CODE = "*99*1*1#"
     }
 
     // ─── UssdEnginePort Implementation ─────────────────────────────────────────
@@ -99,13 +103,16 @@ class UssdEngine(
         val service = UssdAccessibilityService.instance
 
         // 2. Dismiss leftover carrier dialog from prior run
-        service?.dismissDialog()
+        val isMobileLookup = code == MOBILE_LOOKUP_CODE
+        if (isMobileLookup) service?.dismissLookupDialog() else service?.dismissDialog()
 
         // 3. Reset the service's dedup state for a fresh session
         service?.resetForNewSession()
 
         // 4. Reset internal state (cancel timers, clear counters)
         resetState()
+        lookupSessionActive = isMobileLookup
+        lookupDialogDismissed = false
 
         // 5. Increment session ID (monotonically increasing)
         sessionId++
@@ -152,6 +159,13 @@ class UssdEngine(
         return success
     }
 
+    override suspend fun sendLookupReply(mobile: String): Boolean {
+        if (!sessionActive) return false
+        val success = UssdAccessibilityService.instance?.sendLookupReply(mobile) ?: false
+        if (success) resetSlowWatch()
+        return success
+    }
+
     /**
      * Cancels the active USSD session. Dismisses the dialog, hides overlay,
      * and resets all session state.
@@ -167,6 +181,12 @@ class UssdEngine(
     override suspend fun dismissDialog(): Boolean {
         val service = UssdAccessibilityService.instance ?: return false
         return service.dismissDialog()
+    }
+
+    override suspend fun dismissLookupDialog(): Boolean {
+        val dismissed = UssdAccessibilityService.instance?.dismissLookupDialog() ?: false
+        if (dismissed) lookupDialogDismissed = true
+        return dismissed
     }
 
     override fun getSessionId(): Int = sessionId
@@ -244,6 +264,7 @@ class UssdEngine(
 
     private fun terminateSession(reason: String) {
         if (!sessionActive) return
+        val wasLookupSession = lookupSessionActive
         sessionActive = false
         UssdAccessibilityService.instance?.sessionActive = false
 
@@ -252,7 +273,14 @@ class UssdEngine(
         hardTimeoutJob?.cancel()
         hardTimeoutJob = null
 
-        UssdAccessibilityService.instance?.dismissDialog()
+        if (wasLookupSession) {
+            if (!lookupDialogDismissed) UssdAccessibilityService.instance?.dismissLookupDialog()
+            lastDialTime = 0L
+        } else {
+            UssdAccessibilityService.instance?.dismissDialog()
+        }
+        lookupSessionActive = false
+        lookupDialogDismissed = false
         overlayController?.hide()
 
         // Emit a terminal frame so ActionRunner knows the session ended.
@@ -271,6 +299,8 @@ class UssdEngine(
     private fun resetState() {
         sessionActive = false
         UssdAccessibilityService.instance?.sessionActive = false
+        lookupSessionActive = false
+        lookupDialogDismissed = false
         frameCounter = 0
         slowWatchJob?.cancel()
         slowWatchJob = null
@@ -279,7 +309,9 @@ class UssdEngine(
     }
 
     private fun inferHardTimeout(code: String): Long {
-        return if (code.contains("*99*1*3")) {
+        return if (code == MOBILE_LOOKUP_CODE) {
+            HARD_TIMEOUT_LOOKUP_MS
+        } else if (code.contains("*99*1*3")) {
             HARD_TIMEOUT_SEND_MS
         } else {
             HARD_TIMEOUT_OTHER_MS

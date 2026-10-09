@@ -4,6 +4,5 @@
       FileProvider paths for exposing app-private files through a content
       URI (authority = applicationId + ".fileprovider").
     -->
-    <cache-path name="cache" path="." />
-    <files-path name="files" path="." />
+    <cache-path name="shared" path="shared/" />
 </paths>

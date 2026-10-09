@@ -6,7 +6,7 @@
 -dontwarn net.sqlcipher.**
 
 # ─── Room ───────────────────────────────────────────────────────────────────────
--keep class com.offpay.app.data.** { *; }
+-keep class com.offipe.app.data.** { *; }
 # Room uses reflection for DAOs
 -keep class * extends androidx.room.RoomDatabase { *; }
 -keep @androidx.room.Entity class * { *; }
@@ -25,10 +25,10 @@
 -keep class kotlinx.coroutines.** { *; }
 
 # ─── Kotlin Reflect (used by R.drawable/R.raw reflection in easter eggs) ────────
--keep class com.offpay.app.R$* { *; }
+-keep class com.offipe.app.R$* { *; }
 
 # ─── OffPay Application class ───────────────────────────────────────────────────
--keep class com.offpay.app.OffPayApplication { *; }
+-keep class com.offipe.app.OffipeApplication { *; }
 
 # ─── ML Kit Barcode ─────────────────────────────────────────────────────────────
 -keep class com.google.mlkit.** { *; }

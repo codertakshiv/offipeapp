@@ -19,7 +19,8 @@ data class Action(
     val code: String,
     val steps: List<ActionStep>,
     val failurePatterns: List<Regex> = emptyList(),
-    val timeoutMs: Long = 25_000L
+    val timeoutMs: Long = 25_000L,
+    val cancelWithCancelButton: Boolean = false
 )
 
 /**

@@ -10,6 +10,7 @@ object InputValidator {
     private const val VPA_MAX_LENGTH = 50
     private const val AMOUNT_MIN = 1.0
     private const val AMOUNT_MAX = 5000.0
+    private const val NOTE_MAX_LENGTH = 50
     private val PIN_PATTERN = Regex("^\\d{4,6}$")
     private val DECIMAL_PLACES_PATTERN = Regex("^\\d+(\\.\\d{1,2})?$")
 
@@ -69,12 +70,31 @@ object InputValidator {
         return ValidationResult(isValid = true, errorMessage = null)
     }
 
+    /** Validates an optional payment note. */
+    fun validateNote(note: String): ValidationResult {
+        if (note.length > NOTE_MAX_LENGTH) {
+            return ValidationResult(
+                isValid = false,
+                errorMessage = "Note must be at most $NOTE_MAX_LENGTH characters"
+            )
+        }
+        if ('{' in note || '}' in note) {
+            return ValidationResult(isValid = false, errorMessage = "Note must not contain braces")
+        }
+        return ValidationResult(isValid = true, errorMessage = null)
+    }
+
     /**
      * Validates the entire payment form.
      * Checks ALL fields and returns ALL errors simultaneously (not fail-fast).
      * An empty errors map means the form is valid.
      */
-    fun validatePaymentForm(vpa: String, amount: String, pin: String): FormValidationResult {
+    fun validatePaymentForm(
+        vpa: String,
+        amount: String,
+        pin: String,
+        note: String = ""
+    ): FormValidationResult {
         val errors = mutableMapOf<FormField, String>()
 
         val vpaResult = validateVpa(vpa)
@@ -90,6 +110,11 @@ object InputValidator {
         val pinResult = validatePin(pin)
         if (!pinResult.isValid) {
             errors[FormField.PIN] = pinResult.errorMessage!!
+        }
+
+        val noteResult = validateNote(note)
+        if (!noteResult.isValid) {
+            errors[FormField.NOTE] = noteResult.errorMessage!!
         }
 
         return FormValidationResult(errors = errors)
