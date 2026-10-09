@@ -1,12 +1,28 @@
-# Contributing to OffPay
+# 🤝 Contributing to Offipe
 
-Thank you for considering a contribution. OffPay is a small project with big ambitions (making offline UPI payments feel as smooth as online ones) and outside help on UX polish, device-quirk fixes, language coverage, and testing is genuinely valued.
+Thank you for considering a contribution. Offipe is a small project with big ambitions — making offline UPI payments feel as smooth as online ones — and outside help on UX polish, device-quirk fixes, language coverage, and testing is genuinely valued.
 
 This guide explains how to file an issue, set up the project, and get a pull request merged.
 
 ---
 
-## Code of conduct
+## 🧭 Table of contents
+
+- [Code of conduct](#-code-of-conduct)
+- [Ways to contribute](#-ways-to-contribute)
+- [Reporting a bug](#-reporting-a-bug)
+- [Suggesting a feature](#-suggesting-a-feature)
+- [Setting up the project](#-setting-up-the-project)
+- [Branching and pull request flow](#-branching-and-pull-request-flow)
+- [Coding style](#-coding-style)
+- [Testing](#-testing)
+- [Translations](#-translations)
+- [Releasing (maintainers)](#-releasing-maintainers)
+- [Licence on contributions](#-licence-on-contributions)
+
+---
+
+## 🫱️‍🫲️ Code of conduct
 
 Be kind. We take all interactions on the issue tracker, in pull requests, and on any other project surface seriously, regardless of whether a formal CoC document is in place. Personal attacks, harassment, and discriminatory language are not welcome and will be removed.
 
@@ -14,12 +30,12 @@ If something feels off, please email the maintainers privately rather than escal
 
 ---
 
-## Ways to contribute
+## ✨ Ways to contribute
 
 You don't have to write code to help. All of these are equally welcome:
 
 - **Bug reports** with a clear repro, your device + carrier, and what you expected vs what happened.
-- **Compatibility reports.** Did OffPay work for you on a particular bank, carrier, or device? Did it not? Tell us.
+- **Compatibility reports.** Did Offipe work for you on a particular bank, carrier, or device? Did it not? Tell us.
 - **UX feedback.** Screenshots and a short note are perfect.
 - **Translations** of the UI strings into Hindi, Tamil, Telugu, Bengali, Marathi, or any Indian language.
 - **Documentation fixes.** Typos, broken links, unclear sections in any of the markdown files.
@@ -27,12 +43,12 @@ You don't have to write code to help. All of these are equally welcome:
 
 ---
 
-## Reporting a bug
+## 🐛 Reporting a bug
 
 Before opening a new issue, please:
 
 1. Search [existing issues](../../issues) to make sure it isn't already filed.
-2. If it's a payment that went wrong, **double-check whether the bank actually debited you** (the `*99#` service does not debit on a failed session, but the in-app result might still confuse you). A screenshot of the carrier's exact reply (visible in OffPay's failure card) helps a lot.
+2. If it's a payment that went wrong, **double-check whether the bank actually debited you** (the `*99#` service does not debit on a failed session, but the in-app result might still confuse you). A screenshot of the carrier's exact reply (visible in Offipe's failure card) helps a lot.
 3. Open a new issue using the bug report template if available.
 
 A good bug report includes:
@@ -40,17 +56,17 @@ A good bug report includes:
 - A short, descriptive title.
 - Device model, Android version, OS skin (Stock, OneUI, MIUI, ColorOS, …).
 - Carrier (Airtel / Vi / BSNL / …) and the bank you tried to pay from.
-- The OffPay version (visible at the bottom of Settings).
+- The Offipe version (visible at the bottom of Settings).
 - The Operation Mode you were in (Auto / Advanced / Manual).
 - Steps to reproduce, what you expected, and what actually happened.
-- The carrier's verbatim reply if OffPay surfaced one.
+- The carrier's verbatim reply if Offipe surfaced one.
 - A short screen recording if the bug is visual or animation-related.
 
 Please **redact the UPI ID, PIN, and any reference numbers** before posting.
 
 ---
 
-## Suggesting a feature
+## 💡 Suggesting a feature
 
 Open a discussion or an issue tagged `enhancement`. Describe:
 
@@ -58,36 +74,41 @@ Open a discussion or an issue tagged `enhancement`. Describe:
 - A rough idea of how the user would experience it.
 - Any UX edge cases you've already thought about.
 
-OffPay is opinionated about scope: it is an offline UPI client, not a general SMS/USSD framework, not a finance dashboard, not an account aggregator. Features that drift from that scope are likely to be politely declined.
+Offipe is opinionated about scope: it is an offline UPI client, not a general SMS/USSD framework, not a finance dashboard, not an account aggregator. Features that drift from that scope are likely to be politely declined.
 
 ---
 
-## Setting up the project
+## 🛠️ Setting up the project
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full build instructions and project tour. The short version:
 
 ```bash
-git clone https://github.com/<your-org>/OffPayApp.git
-cd OffPayApp
+git clone https://github.com/codertakshiv/offipeapp.git
+cd offipeapp
 # Create local.properties with sdk.dir=…
 ./gradlew :app:assembleDebug
+```
+
+```bat
+:: Windows
+.\gradlew.bat :app:assembleDebug
 ```
 
 Open the root in Android Studio Ladybug or newer. JDK 17 is required.
 
 ---
 
-## Branching and pull request flow
+## 🌿 Branching and pull request flow
 
-1. **Fork** the repository and create your branch from `main`.
+1. **Fork** the repository and create your branch from `master`.
 2. **Branch naming.** Short, hyphen-separated, prefixed with the type of change:
    - `fix/` for bug fixes (`fix/jio-detection-on-dual-sim`)
    - `feat/` for new features (`feat/marathi-locale`)
    - `docs/` for documentation (`docs/contributing-clarity`)
    - `refactor/`, `test/`, `chore/` for the rest
 3. **Make focused commits.** One logical change per commit. Avoid mixing a refactor with a feature.
-4. **Run the test suite** locally before opening the PR (see Testing below).
-5. **Open the pull request** against `main`. Fill in the PR template if one is present, otherwise:
+4. **Run the test suite** locally before opening the PR (see [Testing](#-testing) below).
+5. **Open the pull request** against `master`. Fill in the PR template if one is present, otherwise:
    - Describe what changed and why.
    - List the user-visible impact.
    - Mention any new permission, dependency, or runtime cost.
@@ -98,7 +119,7 @@ Maintainers may rebase or squash your branch on merge. Please do not force-push 
 
 ---
 
-## Coding style
+## 🎨 Coding style
 
 ### Kotlin
 - Follow the [official Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html). The project ships with `kotlin.code.style=official` in `gradle.properties`.
@@ -122,12 +143,12 @@ Anything in `domain/` must remain pure Kotlin: no `android.*` imports, no Compos
 
 ---
 
-## Testing
+## 🧪 Testing
 
 ### What to write tests for
-Anything in `domain/` should have a corresponding test in `app/src/test/java/com/offpay/app/domain/`. We strongly prefer **property-based tests** (Kotest's `checkAll`) for anything that takes string input (such as regex matchers, validators, or parsers) because hand-written examples miss the long tail.
+Anything in `domain/` should have a corresponding test in `app/src/test/java/com/offipe/app/domain/`. We strongly prefer **property-based tests** (Kotest's `checkAll`) for anything that takes string input (such as regex matchers, validators, or parsers) because hand-written examples miss the long tail.
 
-For ViewModel logic that does not require Android, drop a unit test under `app/src/test/java/com/offpay/app/presentation/`.
+For ViewModel logic that does not require Android, drop a unit test under `app/src/test/java/com/offipe/app/presentation/`.
 
 For anything that genuinely needs the platform (Room, DataStore, the QR decoder against a real image), write an instrumented test under `app/src/androidTest/`.
 
@@ -142,6 +163,11 @@ For anything that genuinely needs the platform (Room, DataStore, the QR decoder 
 
 # Both, plus lint
 ./gradlew check
+```
+
+```bat
+:: Windows
+.\gradlew.bat :app:test
 ```
 
 Tests must pass before a PR can be merged.
@@ -160,7 +186,7 @@ It is fine to skip this checklist on a PR that only touches UI styling or string
 
 ---
 
-## Translations
+## 🌐 Translations
 
 UI strings live in `app/src/main/res/values/strings.xml`. To add a translation:
 
@@ -173,21 +199,22 @@ If a string in the default file is missing or feels English-centric, that itself
 
 ---
 
-## Releasing (maintainers)
+## 🚀 Releasing (maintainers)
 
-Release artefacts are built from a clean `main` branch with the version bumped in `app/build.gradle.kts` (`versionCode` and `versionName`). Sign with the production keystore (not committed) and publish via the GitHub Releases page. Tag the commit `vX.Y.Z`.
+Release artefacts are built from a clean `master` branch with the version bumped in `app/build.gradle.kts` (`versionCode` and `versionName`). Sign with the production keystore (not committed) and publish via the GitHub Releases page. Tag the commit `vX.Y.Z`.
 
 Public releases must:
+
 - Pass `./gradlew check`.
 - Run cleanly through the manual USSD checklist on at least one real device per supported carrier.
 - Include a CHANGELOG entry summarising user-visible changes.
 
 ---
 
-## Licence on contributions
+## ⚖️ Licence on contributions
 
 By submitting a pull request you agree that your contribution is licensed under the same [MIT License](LICENSE) as the project, and that you have the right to license it under those terms. We do not require a CLA.
 
 ---
 
-Thanks again: every issue, fix, and translation makes OffPay more useful to people who can't always rely on a data connection.
+Thanks again: every issue, fix, and translation makes Offipe more useful to people who can't always rely on a data connection.

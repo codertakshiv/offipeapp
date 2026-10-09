@@ -1,37 +1,41 @@
-# Architecture
+# 🏗️ Architecture
 
-This document describes how OffPay is organised, how its pieces talk to each other, and how to build it from source. It is aimed at contributors and curious readers — not end users. For features and screenshots, see the [README](README.md).
+<p align="center">
+  <img src="docs/assets/branding/offipe.svg" alt="Offipe logo" width="72" />
+</p>
+
+> How Offipe is organised, how its pieces talk to each other, and how to build it from source. Aimed at contributors and curious readers — not end users. For features and screenshots, see the [README](README.md).
 
 ---
 
-## Tech stack
+## 🧰 Tech stack
 
-| Concern                        | Choice                                              |
-|--------------------------------|-----------------------------------------------------|
-| Language                       | Kotlin (100%)                                       |
-| UI toolkit                     | Jetpack Compose (Material 3)                        |
-| Navigation                     | Navigation Compose (single-activity)                |
-| Async                          | Kotlin Coroutines + Flow                            |
-| Camera                         | CameraX                                             |
-| QR decoding                    | Google ML Kit (on-device, offline)                  |
-| Local database                 | Room + SQLCipher                                    |
-| Preferences                    | Jetpack DataStore                                   |
-| Build system                   | Gradle (Kotlin DSL)                                 |
-| Min / target SDK               | 26 / 34                                             |
-| JVM toolchain                  | Java 17                                             |
-| Tests (unit + property-based)  | Kotest 5                                            |
-| Tests (instrumented)           | AndroidX Test, JUnit 4                              |
+| Concern                       | Choice                                  |
+|-------------------------------|-----------------------------------------|
+| Language                      | Kotlin (100%)                           |
+| UI toolkit                    | Jetpack Compose (Material 3)            |
+| Navigation                    | Navigation Compose (single-activity)    |
+| Async                         | Kotlin Coroutines + Flow                |
+| Camera                        | CameraX                                |
+| QR decoding                   | Google ML Kit (on-device, offline)      |
+| Local database                | Room + SQLCipher                        |
+| Preferences                   | Jetpack DataStore                       |
+| Build system                  | Gradle (Kotlin DSL)                     |
+| Min / target / compile SDK    | 26 / 34 / 35                            |
+| JVM toolchain                 | Java 17                                 |
+| Tests (unit + property-based) | Kotest 5                                |
+| Tests (instrumented)          | AndroidX Test, JUnit 4                  |
 
 The app makes **zero network requests at runtime**. Every dependency above runs purely on-device.
 
 ---
 
-## Module layout
+## 🧱 Module layout
 
-OffPay is a single Gradle module (`:app`) deliberately. The internal structure is a four-layer separation by package, not by module — the project is small enough that splitting it into multiple modules would slow builds without giving anything back.
+Offipe is a single Gradle module (`:app`) deliberately. The internal structure is a four-layer separation by package, not by module — the project is small enough that splitting it into multiple modules would slow builds without giving anything back.
 
 ```
-com.offpay.app
+com.offipe.app
 ├── domain/         ← Pure Kotlin, no Android dependencies. Testable in isolation.
 ├── data/           ← Local persistence (Room, DataStore). Wraps Android.
 ├── platform/       ← Anything that touches the OS: camera, dialer, accessibility,
@@ -39,11 +43,11 @@ com.offpay.app
 └── presentation/   ← Compose UI, ViewModels, navigation.
 ```
 
-The general rule is: **dependencies point inward**. `presentation` and `data` may depend on `domain`. `platform` may depend on `domain`. `domain` depends on nothing app-specific. This keeps the core USSD logic, validation, and parsing testable as ordinary JVM code with no instrumentation.
+The general rule is **dependencies point inward**. `presentation` and `data` may depend on `domain`. `platform` may depend on `domain`. `domain` depends on nothing app-specific. This keeps the core USSD logic, validation, and parsing testable as ordinary JVM code with no instrumentation.
 
 ---
 
-## High-level dataflow
+## 🔀 High-level dataflow
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -63,12 +67,12 @@ The general rule is: **dependencies point inward**. `presentation` and `data` ma
 │ (History, Prefs) │                          │ ── AccessibilityService│
 │ Room + DataStore │                          │ ── OverlayController   │
 └──────────────────┘                          │ ── System dialer       │
-                                              └────────────────────────┘
+                                               └────────────────────────┘
 ```
 
 ---
 
-## A payment, end to end
+## 💸 A payment, end to end
 
 A successful "send money" call moves through these moving parts. Reading the trace top-to-bottom is the fastest way to learn the codebase.
 
@@ -129,28 +133,28 @@ The Balance flow is the same shape with a 2-step action and a `*99*3#` code.
 
 ---
 
-## The five things you should look at first
+## 👀 The five things you should look at first
 
-If you want to understand or change OffPay quickly, these are the entry points by importance.
+If you want to understand or change Offipe quickly, these are the entry points by importance.
 
-| File                                          | What it does                                                                                  |
-|-----------------------------------------------|-----------------------------------------------------------------------------------------------|
-| `domain/ActionRunner.kt`                      | The state machine that walks a scripted USSD flow. Frame-by-frame matching + reply.            |
-| `domain/Actions.kt`                           | The two scripted flows: SendUpi (6 steps) and CheckBalance (2 steps), plus failure regex.      |
-| `platform/UssdEngine.kt`                      | Owns the session lifecycle: dial, timers, frame stream, cancel, dismiss.                       |
-| `platform/UssdAccessibilityService.kt`        | Reads the system USSD dialog via the accessibility framework, fills text fields, taps Send.    |
-| `presentation/PayViewModel.kt`                | Wires the UI to the runner. Validates input. Handles success/failure UI state and PIN wiping.  |
+| File                                          | What it does                                                                                 |
+|-----------------------------------------------|----------------------------------------------------------------------------------------------|
+| `domain/ActionRunner.kt`                      | The state machine that walks a scripted USSD flow. Frame-by-frame matching + reply.           |
+| `domain/Actions.kt`                           | The two scripted flows: SendUpi (6 steps) and CheckBalance (2 steps), plus failure regex.     |
+| `platform/UssdEngine.kt`                      | Owns the session lifecycle: dial, timers, frame stream, cancel, dismiss.                      |
+| `platform/UssdAccessibilityService.kt`        | Reads the system USSD dialog via the accessibility framework, fills text fields, taps Send.   |
+| `presentation/PayViewModel.kt`                | Wires the UI to the runner. Validates input. Handles success/failure UI state and PIN wiping. |
 
 ---
 
-## Layer responsibilities
+## 🗂️ Layer responsibilities
 
 ### `domain/`
 Pure Kotlin. No `android.*` imports allowed. Houses:
 
 - The USSD action engine (`ActionRunner`) and the action definitions (`Actions`).
 - Frame deduplication and placeholder filtering (`FrameFilter`).
-- UPI URI parsing (`UpiParser`).
+- UPI URI parsing (`UpiParser`) and mobile-number lookup parsing (`MobileLookupParser`).
 - Form validation (`InputValidator`, `Validation`).
 - PIN masking helpers (`PinMasking`).
 - Domain models: `UssdFrame`, `Action`, `ActionStep`, `ActionEvent`, `SessionState`, `OperationMode`, `UpiData`, `SimInfo`, `FormField`, `ValidationResult`.
@@ -161,7 +165,9 @@ Anything that needs to be unit-tested without an emulator lives here.
 Local persistence:
 
 - `AppDatabase` — the Room database, opened with a SQLCipher passphrase at startup.
+- `DbKeyProvider` — generates a random 32-byte database key at first run and wraps it using AES-256-GCM with an Android Keystore key; the encrypted key and IV live in private SharedPreferences.
 - `TransactionEntity` + `TransactionDao` — schema for the history table, with a 200-row cap maintained by a "trim oldest" query.
+- `LastBalanceEntity` + `LastBalanceDao` — retains the latest balance response locally.
 - `HistoryRepository` — thin wrapper over the DAO that exposes `Flow<List<TransactionEntity>>`.
 - `PreferencesRepository` — DataStore-backed key-value store for operation mode, last-balance cache, onboarding flag, and battery-warning dismissal.
 
@@ -188,44 +194,44 @@ The single-activity choice is intentional: a multi-activity setup races against 
 
 ---
 
-## Permissions
+## 🔐 Permissions
 
-| Permission                       | Why                                                                                              | Required?                                |
-|----------------------------------|--------------------------------------------------------------------------------------------------|------------------------------------------|
-| `CALL_PHONE`                     | Dial the `*99#` USSD code over the SIM voice channel.                                            | Yes, always.                             |
-| `CAMERA`                         | Live QR scanner.                                                                                 | Only if the user opens Scan.             |
-| `READ_PHONE_STATE`               | Read the active SIM's carrier name to apply the Jio fail-fast rule.                              | Recommended.                             |
-| Accessibility Service            | Read the carrier USSD dialog and answer prompts. Restricted by config to known dialog packages.  | Required for **Auto** mode.              |
-| `SYSTEM_ALERT_WINDOW`            | Paint the OffPay UI over the carrier dialog in **Auto** mode.                                    | Required for **Auto** mode.              |
+| Permission                       | Why                                                                                            | Required?                               |
+|----------------------------------|------------------------------------------------------------------------------------------------|------------------------------------------|
+| `CALL_PHONE`                     | Dial the `*99#` USSD code over the SIM voice channel.                                          | Yes, always.                            |
+| `CAMERA`                         | Live QR scanner.                                                                               | Only if the user opens Scan.            |
+| `READ_PHONE_STATE`               | Read the active SIM's carrier name to apply the Jio fail-fast rule.                            | Recommended.                            |
+| Accessibility Service            | Read the carrier USSD dialog and answer prompts. Restricted by config to known dialog packages. | Required for **Auto** mode.            |
+| `SYSTEM_ALERT_WINDOW`            | Paint the Offipe UI over the carrier dialog in **Auto** mode.                                 | Required for **Auto** mode.            |
 
 If the user denies the optional permissions, **Manual** mode still works on any Android device. Nothing here exfiltrates data — the accessibility service is hard-restricted via `accessibility_service_config.xml` to the known dialer/USSD packages and ignores every other window.
 
 ---
 
-## Compatibility and device support
+## 📱 Compatibility and device support
 
 - Min SDK 26 (Android 8.0). Tested on stock Android, OneUI, MIUI, ColorOS.
 - Phone with a working voice SIM. Wi-Fi-only tablets cannot use `*99#`.
 - **Carriers**: Airtel, Vi, BSNL — work. **Jio** — does not, by network design. The app detects Jio on launch and refuses to dial.
-- The accessibility service is sometimes killed by aggressive battery optimisation on Samsung, Xiaomi, OnePlus, and Oppo devices. The app detects this on launch and prompts the user to whitelist OffPay if needed.
+- The accessibility service is sometimes killed by aggressive battery optimisation on Samsung, Xiaomi, OnePlus, and Oppo devices. The app detects this on launch and prompts the user to whitelist Offipe if needed.
 
 ---
 
-## Operation modes
+## ⚙️ Operation modes
 
 The runtime behaviour during a session is selected by `OperationMode`, persisted in DataStore. The codebase ships **two user-selectable modes** today: `AUTO` (default) and `MANUAL`. A legacy `ADVANCED` enum value still exists in `OperationMode.kt` so older persisted preferences don't crash on read — at runtime it is treated identically to `AUTO`. The Settings UI only exposes Auto and Manual.
 
-| Mode       | Auto-fills the dialog? | Hides the carrier dialog?   | Permissions beyond `CALL_PHONE`             |
-|------------|------------------------|-----------------------------|---------------------------------------------|
-| `AUTO`     | Yes                    | Yes (full overlay)          | Accessibility + `SYSTEM_ALERT_WINDOW`       |
-| `ADVANCED` | Yes (legacy, runtime-aliased to AUTO) | n/a            | Same as AUTO                                |
-| `MANUAL`   | No                     | n/a                         | None                                        |
+| Mode       | Auto-fills the dialog? | Hides the carrier dialog?   | Permissions beyond `CALL_PHONE`          |
+|------------|------------------------|-----------------------------|------------------------------------------|
+| `AUTO`     | Yes                    | Yes (full overlay)          | Accessibility + `SYSTEM_ALERT_WINDOW`    |
+| `ADVANCED` | Yes (legacy, runtime-aliased to AUTO) | n/a            | Same as AUTO                             |
+| `MANUAL`   | No                     | n/a                         | None                                     |
 
 `MANUAL` is the universal fallback — it copies the UPI ID to the clipboard, opens the system dialer with `*99*1*3#` already typed, and the user takes over from there. It does not require the accessibility service to be enabled and works on any Android device.
 
 ---
 
-## Session lifecycle and safety nets
+## 🛡️ Session lifecycle and safety nets
 
 A session is anything from `dial("*99...")` to a terminal event. The engine layers in three independent guards so a hung carrier never leaves the user stuck:
 
@@ -239,7 +245,7 @@ When any terminal event fires (success, failure, user-cancel, timeout) the runne
 
 ---
 
-## PIN handling
+## 🔢 PIN handling
 
 The UPI PIN never leaves volatile process memory. Specifically:
 
@@ -252,7 +258,7 @@ The regex used to detect the PIN-entry frame deliberately uses word boundaries (
 
 ---
 
-## Carrier frame processing
+## 📻 Carrier frame processing
 
 Frames coming out of `UssdAccessibilityService` are noisy. Two filters tame them:
 
@@ -268,9 +274,9 @@ The runner then classifies each surviving frame in priority order:
 
 ---
 
-## Testing
+## 🧪 Testing
 
-OffPay leans heavily on property-based testing because the surface area that matters most (regex matching, frame classification, validation) is exactly the kind of thing where hand-written examples miss edge cases.
+Offipe leans heavily on property-based testing because the surface area that matters most (regex matching, frame classification, validation) is exactly the kind of thing where hand-written examples miss edge cases.
 
 ```
 app/src/
@@ -284,10 +290,12 @@ Notable suites:
 |------------------------------------------|----------------------------------------------------------------------------|
 | `ActionRunnerSuccessPropertyTest`        | Every shape of success text the carrier might emit is detected.            |
 | `ActionRunnerFailurePropertyTest`        | The failure regex never accidentally classifies a legitimate prompt.       |
+| `ActionRunnerLookupTest`                 | The mobile-number lookup action is wired to the correct scripted flow.     |
 | `ActionRunnerStepMatchPropertyTest`      | The step regex matches the right prompts in the right order.               |
 | `ActionRunnerTerminalPropertyTest`       | An unmatched terminal frame always becomes a failure, never silent.        |
 | `FrameFilterPropertyTest`                | Placeholder suppression and dedup are stable under arbitrary inputs.       |
 | `InputValidatorPropertyTest`             | Composite form validation reports per-field errors correctly.              |
+| `MobileLookupParserTest`                 | Recipient-name lookup parsing handles real carrier replies.               |
 | `UpiParserPropertyTest`                  | Round-trips arbitrary `upi://pay?` URIs through parse → equivalent output. |
 | `UpiParserInvalidInputPropertyTest`      | Garbage input is always rejected, never accepted.                          |
 | `PinClearedPropertyTest`                 | The PIN is always wiped within the contracted window, on every exit path.  |
@@ -307,19 +315,19 @@ Instrumented tests cover the encrypted database (`RoomSqlCipherIntegrationTest`)
 
 ---
 
-## Build instructions
+## 🛠️ Build instructions
 
 ### Prerequisites
 
 - **JDK 17** (Eclipse Temurin recommended).
-- **Android SDK** with platform 34 + build-tools 34.x. Set `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) accordingly.
+- **Android SDK** with API 35 (compile) and 34 (target) installed, plus build-tools 34.x. Set `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) accordingly.
 - A real Android device (API 26+) or an emulator. The emulator cannot place real `*99#` calls, but the rest of the app — UI, parsing, validation, history, scanning gallery images — works fine on it.
 
 ### Setup
 
 ```bash
-git clone https://github.com/<your-org>/OffPayApp.git
-cd OffPayApp
+git clone https://github.com/codertakshiv/offipeapp.git
+cd offipeapp
 ```
 
 Create a `local.properties` file at the repo root and point it at your Android SDK:
@@ -330,7 +338,7 @@ sdk.dir=/absolute/path/to/your/Android/Sdk
 
 ### Common Gradle commands
 
-> The repo currently ships only the Unix `gradlew`. On Windows, use the bundled wrapper from Android Studio's terminal, or run `gradle wrapper --gradle-version 9.4.1` once to generate `gradlew.bat`.
+> The repo ships both the Unix `gradlew` and the Windows `gradlew.bat` wrapper.
 
 ```bash
 # Build a debug APK
@@ -349,34 +357,40 @@ sdk.dir=/absolute/path/to/your/Android/Sdk
 ./gradlew clean
 ```
 
+```bat
+:: Windows
+.\gradlew.bat :app:assembleDebug
+```
+
 The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Android Studio
-Open the repo root in Android Studio (Ladybug or newer). Sync Gradle and use the **app** run configuration. The IDE picks up the JDK 17 toolchain automatically from `build.gradle.kts`.
+
+Open the repo root in Android Studio (Ladybug or newer). Sync Gradle and use the **app** run configuration. The IDE picks up the JDK 17 toolchain automatically. For a release build, create a `keystore.properties`; if it is absent the release build falls back to debug signing so compilation never breaks.
 
 ---
 
-## Project structure (full)
+## 📂 Project structure (full)
 
 ```
-OffPayApp/
+offipeapp/
 ├── app/
 │   ├── build.gradle.kts            ← module-level Gradle config
-│   ├── proguard-rules.pro
+│   ├── proguard-rules.pro          ← shrinker rules (SQLCipher, Room, ML Kit, Coroutines)
 │   └── src/
 │       ├── main/
 │       │   ├── AndroidManifest.xml
-│       │   ├── java/com/offpay/app/
-│       │   │   ├── OffPayApplication.kt
+│       │   ├── java/com/offipe/app/
+│       │   │   ├── OffipeApplication.kt
 │       │   │   ├── data/
 │       │   │   ├── domain/
 │       │   │   ├── platform/
 │       │   │   └── presentation/
 │       │   └── res/
-│       │       ├── drawable/        ← logo, onboarding screenshots
+│       │       ├── drawable/        ← logo, onboarding
 │       │       ├── mipmap-*/        ← launcher icons
 │       │       ├── values/          ← strings.xml, themes.xml
-│       │       └── xml/             ← accessibility_service_config.xml, file_paths.xml
+│       │       └── xml/             ← accessibility_service_config.xml, file_paths.xml, data_extraction_rules.xml
 │       ├── test/                    ← JVM unit + property tests
 │       └── androidTest/             ← instrumented tests
 ├── gradle/wrapper/
@@ -386,21 +400,22 @@ OffPayApp/
 ├── README.md
 ├── ARCHITECTURE.md                  ← this file
 ├── CONTRIBUTING.md
+├── SECURITY.md
 └── LICENSE
 ```
 
 ---
 
-## Design decisions worth knowing
+## 💡 Design decisions worth knowing
 
 ### Why a single Gradle module?
 The codebase is small (~30 source files in `main`). A multi-module split would add Gradle overhead without any concrete benefit — the package boundaries already enforce the layer rules, and pure-domain tests run fast as plain JVM tests.
 
-### Why manual DI in `OffPayApplication`?
+### Why manual DI in `OffipeApplication`?
 There is exactly one graph of singletons (database, repositories, engine, runner) and they are wired once at startup. Hilt or Koin would add a runtime dependency and configuration burden that pays off only at much larger scale.
 
 ### Why SQLCipher and not just file-system encryption?
-Transaction history can include the carrier's raw confirmation text, which sometimes contains the recipient's masked phone number or a portion of the VPA. SQLCipher gives at-rest confidentiality even if the user backs up the app's data directory.
+Transaction history can include the carrier's raw confirmation text, which sometimes contains the recipient's masked phone number or a portion of the VPA. SQLCipher gives at-rest confidentiality even if the user backs up the app's data directory. The database key is random per install and wrapped in the Android Keystore.
 
 ### Why Kotest over JUnit 5?
 Property-based testing. The USSD regex surface is a near-perfect fit for `checkAll` generators — hand-written examples consistently miss bugs that property tests catch.
