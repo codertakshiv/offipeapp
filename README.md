@@ -137,6 +137,10 @@ docs/
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and testing guidance. [ARCHITECTURE.md](ARCHITECTURE.md) describes the current code organization and USSD flow.
 
+## Credits
+
+Offipe was created and is maintained by **Takshiv Kashyap** ([@codertakshiv](https://github.com/codertakshiv)).
+
 ## License
 
 Offipe is distributed under the [MIT License](LICENSE).
